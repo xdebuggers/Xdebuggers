@@ -1,0 +1,406 @@
+@media (max-width: 1100px) {
+  #header-home {
+    height: 30rem;
+
+    .header-content {
+      padding-top: 5rem;
+
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  }
+
+  #main-nav {
+    .top-ul {
+      display: block;
+    }
+    .top-li {
+      padding: 1rem 1.5rem;
+      position: relative;
+
+      .in-ul {
+        list-style: none;
+        display: none;
+
+        .in-li {
+          padding: 1rem 1.5rem;
+        }
+      }
+      &:hover {
+        cursor: pointer;
+      }
+
+      &:hover ul {
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 13.5rem;
+        width: 200px;
+        margin-top: 1rem;
+      }
+      &:hover ul li {
+        display: block;
+        background: $color-secondary;
+      }
+      &:hover ul li:hover {
+        background: $color-light;
+      }
+      &:hover ul li a {
+        color: $color-light;
+      }
+      &:hover ul li:hover a {
+        color: $color-primary;
+      }
+      &:hover .top-link {
+        border-color: $color-secondary;
+      }
+    }
+  }
+  .hide {
+    display: block;
+  }
+  .menu-wrap {
+    position: absolute;
+    top: 16;
+    right: 0;
+    z-index: 5;
+  }
+
+  .menu-wrap .toggler {
+    position: absolute;
+    top: 16;
+    right: 0;
+    z-index: 6;
+    cursor: pointer;
+    width: 60px;
+    height: 60px;
+    opacity: 0;
+  }
+
+  .menu-wrap .hamburger {
+    position: absolute;
+    top: 16;
+    right: 0;
+    z-index: 5;
+    width: 30px;
+    height: 30px;
+    padding: 1rem;
+    background: $color-primary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hamburger Line */
+  .menu-wrap .hamburger > div {
+    position: relative;
+    flex: none;
+    width: 100%;
+    height: 2px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s ease;
+  }
+
+  /* Hamburger Lines - Top & Bottom */
+  .menu-wrap .hamburger > div::before,
+  .menu-wrap .hamburger > div::after {
+    content: "";
+    position: absolute;
+    z-index: 5;
+    top: -10px;
+    width: 100%;
+    height: 2px;
+    background: inherit;
+  }
+
+  /* Moves Line Down */
+  .menu-wrap .hamburger > div::after {
+    top: 10px;
+  }
+
+  /* Toggler Animation */
+  .menu-wrap .toggler:checked + .hamburger > div {
+    transform: rotate(135deg);
+  }
+
+  /* Turns Lines Into X */
+  .menu-wrap .toggler:checked + .hamburger > div:before,
+  .menu-wrap .toggler:checked + .hamburger > div:after {
+    top: 0;
+    transform: rotate(90deg);
+  }
+
+  /* Rotate On Hover When Checked */
+  .menu-wrap .toggler:checked:hover + .hamburger > div {
+    transform: rotate(225deg);
+  }
+
+  /* Show Menu */
+  .menu-wrap .toggler:checked ~ .menu {
+    visibility: visible;
+  }
+
+  .menu-wrap .toggler:checked ~ .menu > div {
+    transform: scale(1);
+    transition-duration: $menu-speed;
+  }
+
+  .menu-wrap .toggler:checked ~ .menu > div > div {
+    opacity: 1;
+    transition: opacity 0.4s ease 0.4s;
+  }
+
+  .menu-wrap .menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .menu-wrap .menu > div {
+    background: rgba($color: $color-primary, $alpha: 0.95);
+    border-radius: 50%;
+    width: 300vw;
+    height: 300vw;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    transform: scale(0);
+    transition: all 0.4s ease;
+  }
+
+  .menu-wrap .menu > div > div {
+    text-align: center;
+    max-width: 90vw;
+    max-height: 100vh;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .menu-wrap .menu > div > div > ul > li {
+    list-style: none;
+    color: #fff;
+    font-size: 1.5rem;
+    padding: 1rem;
+  }
+
+  .menu-wrap .menu > div > div > ul > li > a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.4s ease;
+  }
+
+  .menu-wrap .menu > div > div > ul > li > a:hover {
+    color: $color-secondary;
+  }
+}
+
+@media (max-width: 800px) {
+  #header-home {
+    height: 30rem;
+
+    .header-content {
+      padding-top: 5rem;
+
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 680px) {
+  #main-nav {
+    flex-direction: column;
+    align-items: center;
+
+    li {
+      padding: 1rem;
+    }
+  }
+
+  #header {
+    &-home {
+      height: 10rem;
+      border-bottom: 3px solid $color-primary;
+
+      .arrow {
+        display: none;
+      }
+      .header-content {
+        display: none;
+      }
+    }
+    &-inner {
+      height: 10rem;
+    }
+  }
+
+  #home-a .news,
+  #home-b .stats,
+  #home-c .announcement,
+  #references-d .testimonials,
+  #experiences-a .specials,
+  #experiences-b .stats,
+  #experiences-c .process,
+  #about-d .testimonials,
+  #contact-b .contact-info,
+  #project-b .techs,
+  #ref-b .techs,
+  .items {
+    grid-template-columns: 1fr;
+  }
+  #home {
+    &-a {
+      .news div {
+        border-bottom: 1px $color-medium solid;
+        padding-bottom: 1rem;
+
+        &:last-child {
+          border: none;
+          padding-bottom: 0;
+        }
+      }
+    }
+    &-b {
+      .stats div {
+        padding: 2rem 0 1rem 0;
+      }
+    }
+    &-c {
+      .announcement div {
+        border-bottom: 1px $color-medium solid;
+        padding-bottom: 1rem;
+
+        &:last-child {
+          border: none;
+          padding-bottom: 0;
+        }
+      }
+    }
+  }
+
+  #experiences {
+    &-a {
+      .specials div {
+        border-bottom: 1px $color-medium solid;
+        padding-bottom: 1rem;
+
+        &:last-child {
+          border: none;
+          padding-bottom: 0;
+        }
+      }
+    }
+    &-b {
+      .stats div {
+        padding: 2rem 0 1rem 0;
+      }
+    }
+  }
+
+  #about {
+    &-a {
+      .about-info {
+        grid-template-areas:
+          "bioimage"
+          "bio"
+          "aw1"
+          "aw2"
+          "aw3";
+      }
+    }
+    &-c {
+    }
+  }
+
+  #references {
+    &-a {
+      .ref-info {
+        grid-template-areas:
+          "aw1"
+          "aw2"
+          "aw3";
+      }
+    }
+    &-c {
+      display: none;
+    }
+  }
+
+  #contact {
+    &-a {
+      .text-fields {
+        grid-template-areas:
+          "fname"
+          "lname"
+          "bdate"
+          "mail"
+          "phone"
+          "subject"
+          "message";
+      }
+    }
+    &-b {
+      div {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px $color-medium solid;
+
+        &:last-child {
+          border: none;
+          margin-bottom: 0;
+          padding-bottom: 0;
+        }
+      }
+    }
+    &-c {
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  }
+
+  #main-footer {
+    height: auto;
+    .footer-content {
+      flex-direction: column;
+      padding: 1rem;
+      height: auto;
+
+      .personal-info {
+        margin-bottom: 1rem;
+        margin-left: 0;
+        text-align: center;
+      }
+      .contact-info {
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+    }
+  }
+}
+
+@media (max-height: 580px) {
+  #header-home {
+    .header-content {
+      padding-top: 3rem;
+    }
+  }
+  #main-nav {
+    .top-li {
+      padding: 0.5rem 1.5rem;
+    }
+  }
+}

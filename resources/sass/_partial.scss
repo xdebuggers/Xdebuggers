@@ -1,0 +1,134 @@
+.container {
+  max-width: $site-width;
+  padding: 0 1.5rem;
+  margin: auto;
+  overflow: visible;
+}
+
+%btn-shared {
+  display: inline-block;
+  padding: 0.8rem 2rem;
+  transition: all 0.5s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn {
+  &-main {
+    @extend %btn-shared;
+    color: $color-dark;
+    background-color: $color-primary;
+  }
+  &-light {
+    @extend %btn-shared;
+    color: $color-dark;
+    background-color: $color-light;
+  }
+  &-dark {
+    @extend %btn-shared;
+    color: $color-light;
+    background-color: $color-dark;
+  }
+}
+
+button[class^="btn-"]:hover,
+a[class^="btn-"]:hover,
+input[class^="btn-"]:hover {
+  background-color: $color-primary;
+}
+
+.lead {
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+//padding
+.py {
+  &-1 {
+    padding: 1rem 0rem;
+  }
+  &-2 {
+    padding: 2rem 0rem;
+  }
+  &-3 {
+    padding: 3rem 0rem;
+  }
+  &-4 {
+    padding: 4rem 0rem;
+  }
+}
+
+//margin
+.my {
+  &-1 {
+    margin: 1rem 0rem;
+  }
+  &-2 {
+    margin: 2rem 0rem;
+  }
+  &-3 {
+    margin: 3rem 0rem;
+  }
+  &-4 {
+    margin: 4rem 0rem;
+  }
+}
+
+.bottom-line {
+  height: 3px;
+  width: 7rem;
+  background: $color-primary;
+  display: block;
+  margin: 1rem auto 1rem auto;
+}
+
+.section-subject {
+  font-size: 2rem;
+  display: block;
+  padding-bottom: 0.5rem;
+  text-align: center;
+  font-weight: 100;
+  text-transform: uppercase;
+}
+
+.bg {
+  &-primary {
+    background: $color-primary;
+    color: $color-dark;
+  }
+  &-dark {
+    background: $color-dark;
+    color: $color-light;
+  }
+  &-light {
+    background: $color-light;
+    color: $color-dark;
+  }
+  &-medium {
+    background: $color-medium;
+    color: $color-dark;
+  }
+  &-secondary {
+    background: $color-secondary;
+    color: $color-light;
+  }
+}
+
+.progress {
+  overflow: hidden;
+  height: 20px;
+  background: $color-medium;
+  border-radius: 5px;
+  margin-bottom: 0.6rem;
+
+  div {
+    height: 100%;
+    color: $color-light;
+    text-align: center;
+    background: $color-primary;
+  }
+}
