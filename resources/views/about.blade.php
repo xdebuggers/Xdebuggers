@@ -6,18 +6,14 @@
       <h2 class="section-subject">About Me</h2>
       <div class="bottom-line"></div>
       <p class="lead">
-        Let me tell you a little about myself and what I do...
+        {{$cv->lead}}
       </p>
       <div class="about-info">
         <div class="bio-image"></div>
         <div class="bio bg-light">
           <h4>Your Project Is In Safe Hands</h4>
           <p>
-            Lorem ipsum dolor sit, amet consectetur adipisicing elit.
-            Perspiciatis nostrum, eaque velit ipsam facilis sed, quisquam
-            nesciunt unde nihil voluptatum commodi consequuntur molestiae?
-            Fugiat, perspiciatis reprehenderit. Architecto delectus vitae
-            deserunt!
+            {{$cv->description}}
           </p>
         </div>
         <div class="award-1">
@@ -53,30 +49,12 @@
     <div class="container">
       <h2 class="section-subject">Technical Skills</h2>
       <div class="bottom-line"></div>
-      <h4>Photography:</h4>
+      @foreach($skills as $skill)
+      <h4>{{$skill->name}}</h4>:</h4>
       <div class="progress">
-        <div style="width:100%"></div>
+        <div style="width:{{$skill->percent}}%"></div>
       </div>
-      <h4>Adobe Photoshop:</h4>
-      <div class="progress">
-        <div style="width:80%"></div>
-      </div>
-      <h4>Adobe Illustrator:</h4>
-      <div class="progress">
-        <div style="width:70%"></div>
-      </div>
-      <h4>HTML & CSS:</h4>
-      <div class="progress">
-        <div style="width:100%"></div>
-      </div>
-      <h4>Wordpress:</h4>
-      <div class="progress">
-        <div style="width:80%"></div>
-      </div>
-      <h4>Magento:</h4>
-      <div class="progress">
-        <div style="width:70%"></div>
-      </div>
+      @endforeach
     </div>
   </section>
 
@@ -85,32 +63,11 @@
       <h2 class="section-subject">Company Timeline</h2>
       <div class="bottom-line"></div>
       <div class="timeline">
+        @foreach($events as $event)
         <p>
-          Doggo ipsum long bois lotsa pats blep. What a nice floof ruff super
-          chub very good spot, the neighborhood pupper lotsa pats. Borkdrive
-          shibe shoober what a nice floof, borking doggo.
+          {{$event->description}}
         </p>
-        <p>
-          Shoober shooberino adorable doggo many pats, heckin good boys many
-          pats pupper wrinkler, corgo maximum borkdrive. A frighten puggo wow
-          very biscit.
-        </p>
-        <p>
-          Big ol h*ck adorable doggo vvv smol borking doggo with a long snoot
-          for pats big ol, he made many woofs doing me a frighten puggo wow
-          very biscit, ruff fat boi ruff long doggo.
-        </p>
-        <p>
-          Long bois mlem I am bekom fat wrinkler puggo maximum borkdrive big
-          ol pupper I am bekom fat, fluffer vvv adorable doggo lotsa pats
-          snoot. I am bekom fat ur givin me a spook length boy wow very biscit
-          very good spot.
-        </p>
-        <p>
-          Doggo ipsum long bois lotsa pats blep. What a nice floof ruff super
-          chub very good spot, the neighborhood pupper lotsa pats. Borkdrive
-          shibe shoober what a nice floof, borking doggo.
-        </p>
+        @endforeach
       </div>
     </div>
   </section>
@@ -124,11 +81,13 @@
       Download
     </a>
   </div>
+  @if (auth()->user())
   @if (auth()->user()->getRole() == 'admin')
   <div class="container py-1 text-center">
-    <a href="{{route('cv.edit', 1)}}" class="btn-main" style="width: 20rem;">
+    <a href="{{route('cv.edit', $cv->id)}}" class="btn-main" style="width: 20rem;">
       Update
     </a>
   </div>
+  @endif
   @endif
 @endsection

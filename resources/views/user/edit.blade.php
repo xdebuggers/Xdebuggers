@@ -24,6 +24,7 @@
             <label>Phone</label>
             {{Form::number('phone', $user->phone, ['class' => 'form-control', 'placeholder' => 'Enter Phone'])}}
         </div>
+        @if(auth()->user()->getRole() == 'admin')
         <div class="form-group">
             <div class="form-check form-check-inline">
                 {{Form::radio('role', 'admin', $user->role_id == 1 ? true : '')}}
@@ -38,6 +39,7 @@
                 <label class="form-check-label" style="margin: 5px"> Guest</label>
               </div>
         </div>
+        @endif
         {{Form::hidden('_method', 'PUT')}}
             {{Form::submit('Update', ['class' => 'btn btn-primary'])}}
         {!! Form::close() !!}

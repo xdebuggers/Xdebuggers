@@ -5,6 +5,7 @@
         <div class="peer bdR" id="chat-sidebar">
             <div class="layers h-100">
                 <div class="layer w-100 fxg-1 scrollable pos-r ps ps--active-y">
+                    @if(auth()->user()->getRole() == 'admin')
                     @foreach($users as $user)
                     <a href="/messages/{{$user->id}}">
                     <div
@@ -25,6 +26,24 @@
                     </div>
                 </a>
                     @endforeach
+                    @else
+                    <div
+                        class="peers fxw-nw ai-c p-20 bdB bgc-white bgcH-grey-50 cur-p"
+                    >
+
+                            <div class="peer">
+                                <img
+                                    src="https://randomuser.me/api/portraits/men/1.jpg"
+                                    alt=""
+                                    class="w-3r h-3r bdrs-50p"
+                                />
+                            </div>
+                            <div class="peer peer-greed pL-20">
+                            <h6 class="mB-0 lh-1 fw-400">{{auth()->user()->firstname.' '.auth()->user()->lastname}}</h6>
+                            </div>
+
+                    </div>
+                    @endif
                     <div class="ps__rail-x" style="left: 0px; bottom: 0px;">
                         <div
                             class="ps__thumb-x"

@@ -11,7 +11,7 @@
     />
 
     <link rel="stylesheet" href="{{ asset('css/app.css') }}" />
-
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script
       src="https://kit.fontawesome.com/d8e60bc0b5.js"
       crossorigin="anonymous"

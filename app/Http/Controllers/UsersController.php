@@ -106,8 +106,6 @@ class UsersController extends Controller
             'birthday' => 'required',
             'email' => 'required',
             'phone' => 'required',
-            'role' => 'required'
-
         ]);
 
         $user = User::find($id);
@@ -116,16 +114,21 @@ class UsersController extends Controller
         $user->birthday = $request->input('birthday');
         $user->email = $request->input('email');
         $user->phone = $request->input('phone');
-        $user->password = Hash::make($request->input('password'));
-        if($request->input('role') == 'admin'){
-            $user->role_id = 1;
-        } else if($request->input('role') == 'member') {
-            $user->role_id = 2;
-        } else {
-            $user->role_id = 3;
+        if(auth()->user()->getRole() == 'admin'){
+            if($request->input('role') == 'admin'){
+                $user->role_id = 1;
+            } else if($request->input('role') == 'member') {
+                $user->role_id = 2;
+            } else {
+                $user->role_id = 3;
+            }
         }
         $user->save();
-        return redirect('/user')->withSuccess('A new user has been updated successfully!');
+        if(auth()->user()->getRole() == 'admin'){
+            return redirect('/user')->withSuccess('A new user has been updated successfully!');
+        } else {
+            return redirect('/dashboard')->withSuccess('Your info has been updated successfully!');
+        }
     }
 
     /**

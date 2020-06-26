@@ -13,9 +13,9 @@ class CV extends Model
     ];
 
     public function skills() {
-        return $this->hasMany('App\Skills');
+        return $this->hasMany('App\Skill', 'c_v_s_id');
     }
     public function events() {
-        return $this->hasMany('App\Event');
+        return $this->hasMany('App\Event', 'c_v_s_id');
     }
 }

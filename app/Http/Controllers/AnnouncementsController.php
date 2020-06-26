@@ -15,9 +15,7 @@ class AnnouncementsController extends Controller
      */
     public function index()
     {
-        $user_id = auth()->user()->id;
-        $user = User::find($user_id);
-        $announcements = $user->announcements;
+        $announcements = Announcement::all();
         return view('announcement.index')->with('announcements', $announcements);
     }
 

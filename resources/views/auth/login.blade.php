@@ -47,10 +47,9 @@
                                 >
                                     <input
                                         type="checkbox"
-                                        id="inputCall1"
-                                        name="inputCheckboxesCall"
                                         class="peer"
-                                        name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}
+                                        name="remember"
+                                        id="remember" {{ old('remember') ? 'checked' : '' }}
                                     />
                                     <label
                                         for="inputCall1"

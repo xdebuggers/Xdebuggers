@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Announcement;
+use App\CV;
+use App\Skill;
+use App\Event;
 
 class PagesController extends Controller
 {
@@ -14,7 +17,22 @@ class PagesController extends Controller
     }
 
     public function getAbout() {
-        return view('about');
+        $cv = CV::all();
+        if(count($cv) == 1){
+            $cv = $cv[0];
+            $skills = $cv->skills;
+            $events = $cv->events;
+            $data = array(
+                'cv' => $cv,
+                'skills' => $skills,
+                'events' => $events
+            );
+            return view('about')->with($data);
+        } else {
+            return redirect('/')->withErrors('No CV has been found!');
+        }
+
+
     }
 
     public function getContact() {

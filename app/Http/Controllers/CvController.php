@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\CV;
+use App\Skill;
+use App\Event;
 
 class CvController extends Controller
 {
@@ -24,7 +26,12 @@ class CvController extends Controller
      */
     public function create()
     {
-        //
+        $cvs = CV::all();
+        if(count($cvs) > 0){
+            return redirect()->route('about');
+        } else {
+            return view('cv.create');
+        }
     }
 
     /**
@@ -35,7 +42,41 @@ class CvController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $this->validate($request, [
+            'lead' => 'required',
+            'description' => 'required',
+            'skill.*' => 'required',
+            'percent.*' => 'required',
+            'event.*' => 'required',
+        ]);
+
+        $cv = new CV;
+        $cv->lead = $request->input('lead');
+        $cv->description = $request->input('description');
+        $cv->save();
+        $cid = CV::find($cv);
+        $cid = $cid[0]->id;
+        $skills = array();
+        for ($i=0; $i < count($request->skill); $i++) {
+            $sk = new Skill;
+            $sk->name = $request->skill[$i];
+            $sk->percent = $request->percent[$i];
+            $sk->c_v_s_id = $cid;
+            $id = $sk->save();
+            $sk->id = $id;
+            array_push($skills, $sk);
+
+        }
+        $events = array();
+        foreach ($request->event as $event) {
+            $e = new Event;
+            $e->description = $event;
+            $e->c_v_s_id = $cid;
+            $id = $e->save();
+            $e->id = $id;
+            array_push($events, $e);
+        }
+        return redirect()->route('about');
     }
 
     /**
@@ -57,9 +98,16 @@ class CvController extends Controller
      */
     public function edit($id)
     {
-        $cv = CV::find(2);
-
-        return view('cv.edit')->with('cv', $cv);
+        $cv = CV::all();
+        $cv = $cv[0];
+        $skills = $cv->skills;
+        $events = $cv->events;
+        $data = array(
+            'cv' => $cv,
+            'skills' => $skills,
+            'events' => $events
+        );
+        return view('cv.edit')->with($data);
     }
 
     /**
@@ -71,7 +119,35 @@ class CvController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        Skill::truncate();
+        Event::truncate();
+        $cv = CV::find($id);
+        $cv->lead = $request->input('lead');
+        $cv->description = $request->input('description');
+        $cv->save();
+        $cid = CV::find($cv);
+        $cid = $cid[0]->id;
+        $skills = array();
+        for ($i=0; $i < count($request->skill); $i++) {
+            $sk = new Skill;
+            $sk->name = $request->skill[$i];
+            $sk->percent = $request->percent[$i];
+            $sk->c_v_s_id = $cid;
+            $id = $sk->save();
+            $sk->id = $id;
+            array_push($skills, $sk);
+
+        }
+        $events = array();
+        foreach ($request->event as $event) {
+            $e = new Event;
+            $e->description = $event;
+            $e->c_v_s_id = $cid;
+            $id = $e->save();
+            $e->id = $id;
+            array_push($events, $e);
+        }
+        return redirect()->route('about');
     }
 
     /**

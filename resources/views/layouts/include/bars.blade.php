@@ -100,22 +100,24 @@
                             >
                         </li>
                         <li class="nav-item">
-                            <a class="sidebar-link" href="{{route('messages')}}"
+                            <a class="sidebar-link" href="{{auth()->user()->getRole() == 'admin' ? '/messages/' : '/messages/'.auth()->user()->id}}"
                                 ><span class="icon-holder"
                                     ><i class="c-brown-500 ti-email"></i> </span
-                                ><span class="title">Messages</span></a
+                                ><span class="title">{{auth()->user()->getRole() == 'admin' ? 'Messages' : 'My Messages' }}</span></a
                             >
                         </li>
+
                         <li class="nav-item">
                             <a class="sidebar-link" href="{{route('announcement.index')}}"
                                 ><span class="icon-holder"
                                     ><i
                                         class="c-deep-purple-500 ti-comment-alt"
                                     ></i> </span
-                                ><span class="title">Announcements</span></a
+                                ><span class="title">{{auth()->user()->getRole() == 'admin' ? 'Announcements' : 'Old Announcements' }}</span></a
                             >
                         </li>
 
+                        @if(auth()->user()->getRole() == 'admin')
                         <li class="nav-item">
                             <a class="sidebar-link" href="{{route('user.index')}}"
                                 ><span class="icon-holder"
@@ -125,6 +127,18 @@
                                 ><span class="title">Users</span></a
                             >
                         </li>
+                        @endif
+                        @if(auth()->user()->getRole() == 'admin')
+                        <li class="nav-item">
+                            <a class="sidebar-link" href="{{route('cv.create')}}"
+                                ><span class="icon-holder"
+                                    ><i
+                                        class="c-light-blue-500 fa fa-file-o"
+                                    ></i> </span
+                                ><span class="title">CV</span></a
+                            >
+                        </li>
+                        @endif
                     </ul>
                 </div>
             </div>
@@ -161,190 +175,6 @@
                             </li>
                         </ul>
                         <ul class="nav-right">
-                            <li class="notifications dropdown">
-                                <span class="counter bgc-blue">3</span>
-                                <a
-                                    href=""
-                                    class="dropdown-toggle no-after"
-                                    data-toggle="dropdown"
-                                    ><i class="ti-email"></i
-                                ></a>
-                                <ul class="dropdown-menu">
-                                    <li class="pX-20 pY-15 bdB">
-                                        <i class="ti-email pR-10"></i>
-                                        <span class="fsz-sm fw-600 c-grey-900"
-                                            >Emails</span
-                                        >
-                                    </li>
-                                    <li>
-                                        <ul
-                                            class="ovY-a pos-r scrollable lis-n p-0 m-0 fsz-sm"
-                                        >
-                                            <li>
-                                                <a
-                                                    href=""
-                                                    class="peers fxw-nw td-n p-20 bdB c-grey-800 cH-blue bgcH-grey-100"
-                                                    ><div class="peer mR-15">
-                                                        <img
-                                                            class="w-3r bdrs-50p"
-                                                            src="https://randomuser.me/api/portraits/men/1.jpg"
-                                                            alt=""
-                                                        />
-                                                    </div>
-                                                    <div
-                                                        class="peer peer-greed"
-                                                    >
-                                                        <div>
-                                                            <div
-                                                                class="peers jc-sb fxw-nw mB-5"
-                                                            >
-                                                                <div
-                                                                    class="peer"
-                                                                >
-                                                                    <p
-                                                                        class="fw-500 mB-0"
-                                                                    >
-                                                                        John Doe
-                                                                    </p>
-                                                                </div>
-                                                                <div
-                                                                    class="peer"
-                                                                >
-                                                                    <small
-                                                                        class="fsz-xs"
-                                                                        >5 mins
-                                                                        ago</small
-                                                                    >
-                                                                </div>
-                                                            </div>
-                                                            <span
-                                                                class="c-grey-600 fsz-sm"
-                                                                >Want to create
-                                                                your own
-                                                                customized data
-                                                                generator for
-                                                                your
-                                                                app...</span
-                                                            >
-                                                        </div>
-                                                    </div></a
-                                                >
-                                            </li>
-                                            <li>
-                                                <a
-                                                    href=""
-                                                    class="peers fxw-nw td-n p-20 bdB c-grey-800 cH-blue bgcH-grey-100"
-                                                    ><div class="peer mR-15">
-                                                        <img
-                                                            class="w-3r bdrs-50p"
-                                                            src="https://randomuser.me/api/portraits/men/2.jpg"
-                                                            alt=""
-                                                        />
-                                                    </div>
-                                                    <div
-                                                        class="peer peer-greed"
-                                                    >
-                                                        <div>
-                                                            <div
-                                                                class="peers jc-sb fxw-nw mB-5"
-                                                            >
-                                                                <div
-                                                                    class="peer"
-                                                                >
-                                                                    <p
-                                                                        class="fw-500 mB-0"
-                                                                    >
-                                                                        Moo Doe
-                                                                    </p>
-                                                                </div>
-                                                                <div
-                                                                    class="peer"
-                                                                >
-                                                                    <small
-                                                                        class="fsz-xs"
-                                                                        >15 mins
-                                                                        ago</small
-                                                                    >
-                                                                </div>
-                                                            </div>
-                                                            <span
-                                                                class="c-grey-600 fsz-sm"
-                                                                >Want to create
-                                                                your own
-                                                                customized data
-                                                                generator for
-                                                                your
-                                                                app...</span
-                                                            >
-                                                        </div>
-                                                    </div></a
-                                                >
-                                            </li>
-                                            <li>
-                                                <a
-                                                    href=""
-                                                    class="peers fxw-nw td-n p-20 bdB c-grey-800 cH-blue bgcH-grey-100"
-                                                    ><div class="peer mR-15">
-                                                        <img
-                                                            class="w-3r bdrs-50p"
-                                                            src="https://randomuser.me/api/portraits/men/3.jpg"
-                                                            alt=""
-                                                        />
-                                                    </div>
-                                                    <div
-                                                        class="peer peer-greed"
-                                                    >
-                                                        <div>
-                                                            <div
-                                                                class="peers jc-sb fxw-nw mB-5"
-                                                            >
-                                                                <div
-                                                                    class="peer"
-                                                                >
-                                                                    <p
-                                                                        class="fw-500 mB-0"
-                                                                    >
-                                                                        Lee Doe
-                                                                    </p>
-                                                                </div>
-                                                                <div
-                                                                    class="peer"
-                                                                >
-                                                                    <small
-                                                                        class="fsz-xs"
-                                                                        >25 mins
-                                                                        ago</small
-                                                                    >
-                                                                </div>
-                                                            </div>
-                                                            <span
-                                                                class="c-grey-600 fsz-sm"
-                                                                >Want to create
-                                                                your own
-                                                                customized data
-                                                                generator for
-                                                                your
-                                                                app...</span
-                                                            >
-                                                        </div>
-                                                    </div></a
-                                                >
-                                            </li>
-                                        </ul>
-                                    </li>
-                                    <li class="pX-20 pY-15 ta-c bdT">
-                                        <span
-                                            ><a
-                                                href="email.html"
-                                                class="c-grey-600 cH-blue fsz-sm td-n"
-                                                >View All Email
-                                                <i
-                                                    class="fs-xs ti-angle-right mL-10"
-                                                ></i></a
-                                        ></span>
-                                    </li>
-                                </ul>
-                            </li>
                             <li class="dropdown">
                                 <a
                                     href=""
@@ -359,25 +189,17 @@
                                     </div>
                                     <div class="peer">
                                         <span class="fsz-sm c-grey-900"
-                                            >John Doe</span
+                                            >{{auth()->user()->firstname.' '.auth()->user()->lastname}}</span
                                         >
                                     </div></a
                                 >
                                 <ul class="dropdown-menu fsz-sm">
                                     <li>
                                         <a
-                                            href=""
+                                            href="{{ route('user.edit', auth()->user()->id)}}"
                                             class="d-b td-n pY-5 bgcH-grey-100 c-grey-700"
                                             ><i class="ti-user mR-10"></i>
                                             <span>Profile</span></a
-                                        >
-                                    </li>
-                                    <li>
-                                        <a
-                                            href="email.html"
-                                            class="d-b td-n pY-5 bgcH-grey-100 c-grey-700"
-                                            ><i class="ti-email mR-10"></i>
-                                            <span>Messages</span></a
                                         >
                                     </li>
                                     <li role="separator" class="divider"></li>
