@@ -1,5 +1,4 @@
 @extends('layouts.admin')
-
 @section('content')
 <style>
     #loader {
@@ -76,6 +75,7 @@
                     </div>
                 </div>
             </div>
+            @include('sweetalert::alert')
             @yield('form')
         </div>
 @endsection

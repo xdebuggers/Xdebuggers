@@ -69,7 +69,7 @@
                                         <div class="peer">
                                             <div class="logo">
                                                 <img style="width:65px; height:65px"
-                                            src="{{ asset('images/logo-ico.png') }}"
+                                            src="{{ asset('images/logo-dark-ico.png') }}"
                                                     alt=""
                                                 />
                                             </div>
@@ -85,7 +85,7 @@
                             <div class="peer">
                                 <div class="mobile-toggle sidebar-toggle">
                                     <a href="" class="td-n"
-                                        ><i class="ti-arrow-circle-left"></i
+                                        ><i class="fas fa-arrow-circle-left"></i
                                     ></a>
                                 </div>
                             </div>
@@ -95,34 +95,34 @@
                         <li class="nav-item mT-30 actived">
                             <a class="sidebar-link" href="{{route('dashboard')}}"
                                 ><span class="icon-holder"
-                                    ><i class="c-blue-500 ti-home"></i> </span
+                                    ><i class="c-blue-500 fas fa-home"></i> </span
                                 ><span class="title">Dashboard</span></a
                             >
                         </li>
                         <li class="nav-item">
                             <a class="sidebar-link" href="{{auth()->user()->getRole() == 'admin' ? '/messages/' : '/messages/'.auth()->user()->id}}"
                                 ><span class="icon-holder"
-                                    ><i class="c-brown-500 ti-email"></i> </span
+                                    ><i class="c-brown-500 fas fa-comments"></i> </span
                                 ><span class="title">{{auth()->user()->getRole() == 'admin' ? 'Messages' : 'My Messages' }}</span></a
                             >
                         </li>
-
+                        @if(auth()->user()->getRole() != 'guest')
                         <li class="nav-item">
                             <a class="sidebar-link" href="{{route('announcement.index')}}"
                                 ><span class="icon-holder"
                                     ><i
-                                        class="c-deep-purple-500 ti-comment-alt"
-                                    ></i> </span
+                                        class="c-deep-purple-500 fas fa-bullhorn"></i> </span
                                 ><span class="title">{{auth()->user()->getRole() == 'admin' ? 'Announcements' : 'Old Announcements' }}</span></a
                             >
                         </li>
+                        @endif
 
                         @if(auth()->user()->getRole() == 'admin')
                         <li class="nav-item">
                             <a class="sidebar-link" href="{{route('user.index')}}"
                                 ><span class="icon-holder"
                                     ><i
-                                        class="c-light-blue-500 ti-pencil"
+                                        class="c-light-blue-500 fas fa-users"
                                     ></i> </span
                                 ><span class="title">Users</span></a
                             >
@@ -151,27 +151,8 @@
                                     id="sidebar-toggle"
                                     class="sidebar-toggle"
                                     href="javascript:void(0);"
-                                    ><i class="ti-menu"></i
+                                    ><i class="fas fa-bars"></i
                                 ></a>
-                            </li>
-                            <li class="search-box">
-                                <a
-                                    class="search-toggle no-pdd-right"
-                                    href="javascript:void(0);"
-                                    ><i
-                                        class="search-icon ti-search pdd-right-10"
-                                    ></i>
-                                    <i
-                                        class="search-icon-close ti-close pdd-right-10"
-                                    ></i
-                                ></a>
-                            </li>
-                            <li class="search-input">
-                                <input
-                                    class="form-control"
-                                    type="text"
-                                    placeholder="Search..."
-                                />
                             </li>
                         </ul>
                         <ul class="nav-right">
@@ -198,7 +179,7 @@
                                         <a
                                             href="{{ route('user.edit', auth()->user()->id)}}"
                                             class="d-b td-n pY-5 bgcH-grey-100 c-grey-700"
-                                            ><i class="ti-user mR-10"></i>
+                                            ><i class="fas fa-id-card mR-10"></i>
                                             <span>Profile</span></a
                                         >
                                     </li>
@@ -208,7 +189,7 @@
                                         onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
                                         href="#"
                                         class="d-b td-n pY-5 bgcH-grey-100 c-grey-700"
-                                        ><i class="ti-power-off mR-10"></i>
+                                        ><i class="fas fa-sign-out-alt mR-10"></i>
                                         <span>Logout</span></a>
                                         <form id="logout-form" action="{{ route('logout') }}" method="post" style="display: none;">
                                             @csrf

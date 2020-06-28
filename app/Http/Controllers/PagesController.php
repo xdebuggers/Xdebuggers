@@ -41,12 +41,21 @@ class PagesController extends Controller
             return redirect('/')->withErrors('You need to be logged in to contact us');
         }
         else {
-            $user->birthday = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $user->birthday)->format('Y-m-d');
-            return view('contact')->with('user', $user);
+            if(auth()->user()->getRole() == 'admin') {
+                return redirect('/messages');
+            } else {
+                $user->birthday = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $user->birthday)->format('Y-m-d');
+                return view('contact')->with('user', $user);
+            }
+
         }
     }
 
     public function getProjects() {
         return view('projects');
+    }
+
+    public function getExperiences() {
+        return view('experiences');
     }
 }

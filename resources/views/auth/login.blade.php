@@ -13,7 +13,9 @@
                             >{{ __('E-Mail Address') }}</label
                         >
                         <input
-                            name="email" value="{{ old('email') }}" required autocomplete="email"
+                            name="email"
+                            value="{{ Cookie::get('email') ? Cookie::get('email') : old('email') }}"
+                            required autocomplete="email"
                             type="email"
                             class="form-control @error('email') is-invalid @enderror"
                             placeholder="name@email.com"
@@ -32,6 +34,7 @@
                             class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password"
                             placeholder="Password"
                             id="password"
+                            value="{{Cookie::get('password')}}"
                         />
                         @error('password')
                                     <span class="invalid-feedback" role="alert">
@@ -49,7 +52,8 @@
                                         type="checkbox"
                                         class="peer"
                                         name="remember"
-                                        id="remember" {{ old('remember') ? 'checked' : '' }}
+                                        id="remember"
+                                        {{ Cookie::get('remember') ? 'checked' : '' }}
                                     />
                                     <label
                                         for="inputCall1"

@@ -18,6 +18,8 @@ Route::get('/', 'PagesController@getHome')->name('home');
 Route::get('/about', 'PagesController@getAbout')->name('about');
 Route::get('/contact', 'PagesController@getContact')->name('contact');
 Route::get('/projects', 'PagesController@getProjects')->name('projects');
+Route::get('/experiences', 'PagesController@getExperiences')->name('experiences');
+
 Route::post('/contact/submit', 'MessagesController@submit');
 Route::get('/messages', 'MessagesController@getMessages')->name('messages');
 Route::resource('announcement', 'AnnouncementsController');

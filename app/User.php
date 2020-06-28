@@ -5,6 +5,7 @@ namespace App;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Role;
 
 class User extends Authenticatable
 {
@@ -50,9 +51,9 @@ class User extends Authenticatable
     }
 
     public function getRole() {
-        if ($this->role_id == 1){
+        if (Role::find($this->role_id)->name == 'admin'){
             return 'admin';
-        } else if ($this->role_id == 2){
+        } else if (Role::find($this->role_id)->name ==  'member'){
             return 'member';
         } else {
             return 'guest';

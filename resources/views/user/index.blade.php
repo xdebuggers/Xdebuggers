@@ -27,12 +27,12 @@
             <td>{{$user->lastname}}</td>
             <td>{{$user->email}}</td>
             <td>
-                <a href="{{ route('user.edit', $user->id)}}" class="btn btn-sm btn-info">
+                <a href="{{ route('user.edit', $user->id)}}" class="btn btn-sm btn-info" style="margin: 3px;">
                     <i class="fa fa-pencil"></i>
                 </a>
                 {!! Form::open(['route' => ['user.destroy', $user->id], 'method' => 'POST', 'class' => 'pull-left']) !!}
                 {{ Form::hidden('_method', 'DELETE')}}
-                {{Form::button("<i class='fa fa-trash'></i>", ['type' => 'submit', 'class' => 'btn btn-sm btn-danger'])}}
+                {{Form::button('<i class="fas fa-trash"></i>', ['type' => 'submit', 'class' => 'btn btn-sm btn-danger' , 'style' => 'margin: 3px;'])}}
                 {!! Form::close() !!}
             </td>
         </tr>

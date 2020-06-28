@@ -55,7 +55,7 @@
           ></a>
         </div>
       </div>
-      <p class="copy-right">Copyright &copy; 2019. All right Reserved</p>
+      <p class="copy-right">Copyright &copy; 2020. All right Reserved</p>
     </footer>
     <button id="topBtn">
       <i class="fas fa-arrow-up fa-2x"></i>

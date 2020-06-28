@@ -7,6 +7,7 @@
                 <div class="layer w-100 fxg-1 scrollable pos-r ps ps--active-y">
                     @if(auth()->user()->getRole() == 'admin')
                     @foreach($users as $user)
+                    @if($user != auth()->user())
                     <a href="/messages/{{$user->id}}">
                     <div
                         class="peers fxw-nw ai-c p-20 bdB bgc-white bgcH-grey-50 cur-p"
@@ -25,6 +26,7 @@
 
                     </div>
                 </a>
+                @endif
                     @endforeach
                     @else
                     <div

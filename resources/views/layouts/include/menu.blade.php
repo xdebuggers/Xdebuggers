@@ -11,18 +11,18 @@
             ></a>
             <ul class="in-ul">
               <li class="in-li">
-                <a href="project1.html">proj #1</a>
+                <a href="#">proj #1</a>
               </li>
               <li class="in-li">
-                <a href="project2.html">proj #2</a>
+                <a href="#">proj #2</a>
               </li>
               <li class="in-li">
-                <a href="project3.html">proj #3</a>
+                <a href="#">proj #3</a>
               </li>
             </ul>
           </li>
           <li class="top-li">
-            <a href="experiences.html" class="top-link"
+            <a href="{{route('experiences')}}" class="top-link"
               >Experiences
             </a>
           </li>

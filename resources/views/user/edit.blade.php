@@ -24,6 +24,10 @@
             <label>Phone</label>
             {{Form::number('phone', $user->phone, ['class' => 'form-control', 'placeholder' => 'Enter Phone'])}}
         </div>
+        <div class="form-group">
+            <label>Password</label>
+            {{Form::password('password', ['class' => 'form-control', 'placeholder' => 'Enter Password'])}}
+        </div>
         @if(auth()->user()->getRole() == 'admin')
         <div class="form-group">
             <div class="form-check form-check-inline">
