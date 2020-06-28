@@ -54,8 +54,8 @@ class CvController extends Controller
         $cv->lead = $request->input('lead');
         $cv->description = $request->input('description');
         $cv->save();
-        $cid = CV::find($cv);
-        $cid = $cid[0]->id;
+        $cv = CV::all();
+        $cid = $cv[0]->id;
         $skills = array();
         for ($i=0; $i < count($request->skill); $i++) {
             $sk = new Skill;
