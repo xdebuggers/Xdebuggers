@@ -17,7 +17,7 @@ class MessagesController extends Controller
         $message->user_id = $user_id;
         $message->save();
         $subject = $request->input('subject');
-        $to_mail = auth()->user()->email;
+        $to_mail = 'bedavi.m96@gmail.com';
         $data = array(
             'name' => auth()->user()->firstname.' '.auth()->user()->lastname,
             'body' => $request->input('message')
