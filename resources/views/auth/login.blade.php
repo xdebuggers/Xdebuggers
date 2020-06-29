@@ -8,6 +8,7 @@
                 <h4 class="fw-300 c-grey-900 mB-40">Login</h4>
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
+                    {{ csrf_field() }} {{ method_field('POST') }}
                     <div class="form-group">
                         <label class="text-normal text-dark" for="email"
                             >{{ __('E-Mail Address') }}</label
