@@ -59,7 +59,7 @@
         <div class="peers ai-s fxw-nw h-100vh">
             <div
                 class="peer peer-greed h-100 pos-r bgr-n bgpX-c bgpY-c bgsz-cv"
-                style="background-image: url({{ asset('images/showcase.jpg') }});"
+                style="background-image: url({{ '/images/showcase.jpg' }});"
             >
                 <div class="pos-a centerXY">
                     <div
@@ -69,7 +69,7 @@
                         <img
                             {{-- style="width: 90px; height: 90px" --}}
                             class="pos-a centerXY"
-                            src="{{ asset('images/logo.png') }}"
+                            src="{{ '/images/logo.png' }}"
                             alt=""
                         />
                     </div>

@@ -69,7 +69,7 @@
                                         <div class="peer">
                                             <div class="logo">
                                                 <img style="width:65px; height:65px"
-                                            src="{{ asset('images/logo-dark-ico.png') }}"
+                                            src="{{ '/images/logo-dark-ico.png' }}"
                                                     alt=""
                                                 />
                                             </div>
