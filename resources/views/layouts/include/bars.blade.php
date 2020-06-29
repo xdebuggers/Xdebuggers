@@ -192,7 +192,7 @@
                                         ><i class="fas fa-sign-out-alt mR-10"></i>
                                         <span>Logout</span></a>
                                         <form id="logout-form" action="{{ route('logout') }}" method="post" style="display: none;">
-                                            @csrf
+                                            {{ csrf_field() }} {{ method_field('POST') }}
                                         </form>
                                     </li>
                                 </ul>
