@@ -58,4 +58,10 @@ class PagesController extends Controller
     public function getExperiences() {
         return view('experiences');
     }
+
+    public function getSearchResults(Request $request) {
+        $term = $request->input('term');
+        $elements = Announcement::where('subject', 'like', '%'.$term.'%')->orWhere('content', 'like', '%'.$term.'%')->get();
+        return view('results')->with('elements', $elements);
+    }
 }

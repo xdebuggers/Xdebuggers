@@ -19,6 +19,7 @@ Route::get('/about', 'PagesController@getAbout')->name('about');
 Route::get('/contact', 'PagesController@getContact')->name('contact');
 Route::get('/projects', 'PagesController@getProjects')->name('projects');
 Route::get('/experiences', 'PagesController@getExperiences')->name('experiences');
+Route::post('/search', 'PagesController@getSearchResults')->name('search');
 
 Route::post('/contact/submit', 'MessagesController@submit');
 Route::get('/messages', 'MessagesController@getMessages')->name('messages');
@@ -29,4 +30,5 @@ Auth::routes();
 
 Route::get('/dashboard', 'DashboardController@index')->name('dashboard');
 Route::get('/messages/{id}', 'MessagesController@getUserMessages')->name('getMessages');
+
 

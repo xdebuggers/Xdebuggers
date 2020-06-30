@@ -18,6 +18,7 @@
             @include('layouts.include.menu')
           </div>
         </nav>
+        @include('layouts.include.search')
       </div>
       <div class="header-content">
         <h1>
@@ -34,7 +35,7 @@
           We specilized in System dwvelopments Lorem ipsum dolor sit amet
           consectetur adipisicing elit.
         </p>
-        <a href="projects.html" class="btn-dark">See Our Projects</a>
+        <a href="{{route('projects')}}" class="btn-dark">See Our Projects</a>
       </div>
     </div>
   </header>
