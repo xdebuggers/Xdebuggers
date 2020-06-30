@@ -114,7 +114,10 @@ class UsersController extends Controller
         $user->birthday = $request->input('birthday');
         $user->email = $request->input('email');
         $user->phone = $request->input('phone');
-        $user->password = Hash::make($request->input('password'));
+        if($request->input('password') != '') {
+            $user->password = Hash::make($request->input('password'));
+        }
+
         if(auth()->user()->getRole() == 'admin'){
             if($request->input('role') == 'admin'){
                 $user->role_id = 1;
