@@ -61,7 +61,9 @@ class PagesController extends Controller
 
     public function getSearchResults(Request $request) {
         $term = $request->input('term');
-        $elements = Announcement::where('subject', 'like', '%'.$term.'%')->orWhere('content', 'like', '%'.$term.'%')->get();
+        $elements = Announcement::where('subject', 'like', '%'.$term.'%')->
+        orWhere('content', 'like', '%'.$term.'%')->orderBy('created_at', 'DESC')->take(4)->
+        get();
         return view('results')->with('elements', $elements);
     }
 }
