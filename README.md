@@ -1,5 +1,5 @@
 # Xdebuggers Website Projcet Source Code
 
-## [Report:](https://www.google.com)
+## [Report](https://github.com/xdebuggers/Xdebuggers/blob/master/RAPOR.pdf)
 
-## [SQL Code:](https://www.google.com)
+## [SQL Code](https://github.com/xdebuggers/Xdebuggers/blob/master/xdebuggers.sql)
