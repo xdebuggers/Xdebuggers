@@ -1,0 +1,4655 @@
+161307066 Muhammed Bedavi
+
+<?php
+
+class ForgotPasswordController extends Controller
+{
+
+    use SendsPasswordResetEmails;
+    public function sendResetLinkEmail(Request $request)
+    {
+        $this->validateEmail($request);
+        $email = $this->credentials($request)['email'];
+        $user = User::where('email', $email)->get()->first();
+        if(!$user) {
+            return view('auth.passwords.email');
+        } else {
+            $newPassword = Str::random(8);
+            $user->password = Hash::make($newPassword);
+
+            $subject = 'Password Reset';
+            $to_mail = $user->email;
+            $data = array(
+                'name' => $user->firstname.' '.$user->lastname,
+                'body' => 'Your new password is '.$newPassword
+            );
+            Mail::send('mail', $data, function($message) use ($to_mail, $subject) {
+                $message->to($to_mail)
+                ->subject($subject);
+            });
+            $user->save();
+            return redirect('/')->withSuccess('Your password has benn changed successfully!');
+
+
+        }
+
+    }
+}
+
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+
+
+class LoginController extends Controller
+{
+
+    use AuthenticatesUsers;
+
+    /**
+     * Where to redirect users after login.
+     *
+     * @var string
+     */
+    protected $redirectTo = RouteServiceProvider::HOME;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('guest')->except('logout');
+    }
+
+    public function login(Request $request)
+    {
+        $this->validateLogin($request);
+
+        // If the class is using the ThrottlesLogins trait, we can automatically throttle
+        // the login attempts for this application. We'll key this by the username and
+        // the IP address of the client making these requests into this application.
+        if (method_exists($this, 'hasTooManyLoginAttempts') &&
+            $this->hasTooManyLoginAttempts($request)) {
+            $this->fireLockoutEvent($request);
+
+            return $this->sendLockoutResponse($request);
+        }
+
+        if ($this->attemptLogin($request)) {
+            return $this->sendLoginResponse($request);
+        }
+
+        // If the login attempt was unsuccessful we will increment the number of attempts
+        // to login and redirect the user back to the login form. Of course, when this
+        // user surpasses their maximum number of attempts they will get locked out.
+        $this->incrementLoginAttempts($request);
+
+        return $this->sendFailedLoginResponse($request);
+    }
+
+    protected function attemptLogin(Request $request)
+    {
+        $remember = $request->input('remember');
+        $email = $request->input('email');
+        $password = $request->input('password');
+        if(isset($remember) && !empty($remember)){
+            Cookie::queue('email', $email, 120);
+            Cookie::queue('password', $password, 120);
+            Cookie::queue('remember', true, 120);
+        } else {
+
+            Cookie::queue(Cookie::forget('email'));
+            Cookie::queue(Cookie::forget('password'));
+            Cookie::queue(Cookie::forget('remember'));
+        }
+        return $this->guard()->attempt(
+            $this->credentials($request), $request->filled('remember')
+        );
+    }
+
+
+}
+
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+
+
+class RegisterController extends Controller
+{
+
+    use RegistersUsers;
+
+    /**
+     * Where to redirect users after registration.
+     *
+     * @var string
+     */
+    protected $redirectTo = RouteServiceProvider::HOME;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('guest');
+    }
+
+    /**
+     * Get a validator for an incoming registration request.
+     *
+     * @param  array  $data
+     * @return \Illuminate\Contracts\Validation\Validator
+     */
+    protected function validator(array $data)
+    {
+        return Validator::make($data, [
+            'firstname' => ['required', 'string', 'max:255'],
+            'lastname' => ['required', 'string', 'max:255'],
+            'birthday' => ['required', 'date', 'max:255'],
+            'phone' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+    }
+
+    /**
+     * Create a new user instance after a valid registration.
+     *
+     * @param  array  $data
+     * @return \App\User
+     */
+    protected function create(array $data)
+    {
+        $r_id = -1;
+        if(count(User::all()) == 0)
+        {
+            $r_id = Role::where('name', 'admin')->get()->first()->id;
+        } else {
+            $r_id = Role::where('name', 'guest')->get()->first()->id;
+        }
+        return User::create([
+            'firstname' => $data['firstname'],
+            'lastname' => $data['lastname'],
+            'birthday' => $data['birthday'],
+            'phone' => $data['phone'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'role_id' => $r_id
+        ]);
+    }
+}
+
+
+<?php
+
+
+
+class AnnouncementsController extends Controller
+{
+
+    public function index()
+    {
+        $announcements = Announcement::all();
+        return view('announcement.index')->with('announcements', $announcements);
+    }
+
+    public function create()
+    {
+        return view('announcement.create');
+    }
+
+
+    public function store(Request $request)
+    {
+        $this->validate($request, [
+            'subject' => 'required',
+            'content' => 'required'
+        ]);
+
+        $ann = new Announcement;
+        $ann->subject = $request->input('subject');
+        $ann->content = $request->input('content');
+        $ann->user_id = auth()->user()->id;
+        $ann->save();
+        return redirect('/announcement')->withSuccess('Your announcement has been added successfully!');
+    }
+
+
+    public function show($id)
+    {
+        //
+    }
+
+
+    public function edit($id)
+    {
+        $ann = Announcement::find($id);
+        return view('announcement.edit')->with('announcement', $ann);
+    }
+
+
+    public function update(Request $request, $id)
+    {
+        $this->validate($request, [
+            'subject' => 'required',
+            'content' => 'required'
+        ]);
+
+        $ann = Announcement::find($id);
+        $ann->subject = $request->input('subject');
+        $ann->content = $request->input('content');
+        $ann->user_id = auth()->user()->id;
+        $ann->save();
+        return redirect('/announcement')->withSuccess('Your announcement has been updated successfully!');
+    }
+
+
+    public function destroy($id)
+    {
+        $ann = Announcement::find($id);
+        $ann->delete();
+        return redirect('/announcement')->withSuccess('Your announcement has been deleted successfully!');
+    }
+}
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\CV;
+use App\Skill;
+use App\Event;
+
+class CvController extends Controller
+{
+
+    public function index()
+    {
+        //
+    }
+
+
+    public function create()
+    {
+        $cvs = CV::all();
+        if(count($cvs) > 0){
+            return redirect()->route('about');
+        } else {
+            return view('cv.create');
+        }
+    }
+
+
+    public function store(Request $request)
+    {
+        $this->validate($request, [
+            'lead' => 'required',
+            'description' => 'required',
+            'skill.*' => 'required',
+            'percent.*' => 'required',
+            'event.*' => 'required',
+        ]);
+
+        $cv = new CV;
+        $cv->lead = $request->input('lead');
+        $cv->description = $request->input('description');
+        $cv->save();
+        $cv = CV::all();
+        $cid = $cv[0]->id;
+        $skills = array();
+        for ($i=0; $i < count($request->skill); $i++) {
+            $sk = new Skill;
+            $sk->name = $request->skill[$i];
+            $sk->percent = $request->percent[$i];
+            $sk->c_v_s_id = $cid;
+            $id = $sk->save();
+            $sk->id = $id;
+            array_push($skills, $sk);
+
+        }
+        $events = array();
+        foreach ($request->event as $event) {
+            $e = new Event;
+            $e->description = $event;
+            $e->c_v_s_id = $cid;
+            $id = $e->save();
+            $e->id = $id;
+            array_push($events, $e);
+        }
+        return redirect()->route('about');
+    }
+
+
+    public function show($id)
+    {
+        //
+    }
+
+
+    public function edit($id)
+    {
+        $cv = CV::all();
+        $cv = $cv[0];
+        $skills = $cv->skills;
+        $events = $cv->events;
+        $data = array(
+            'cv' => $cv,
+            'skills' => $skills,
+            'events' => $events
+        );
+        return view('cv.edit')->with($data);
+    }
+
+
+    public function update(Request $request, $id)
+    {
+        Skill::truncate();
+        Event::truncate();
+        $cv = CV::find($id);
+        $cv->lead = $request->input('lead');
+        $cv->description = $request->input('description');
+        $cv->save();
+        $cv = CV::all();
+        $cid = $cv[0]->id;
+        $skills = array();
+        for ($i=0; $i < count($request->skill); $i++) {
+            $sk = new Skill;
+            $sk->name = $request->skill[$i];
+            $sk->percent = $request->percent[$i];
+            $sk->c_v_s_id = $cid;
+            $id = $sk->save();
+            $sk->id = $id;
+            array_push($skills, $sk);
+
+        }
+        $events = array();
+        foreach ($request->event as $event) {
+            $e = new Event;
+            $e->description = $event;
+            $e->c_v_s_id = $cid;
+            $id = $e->save();
+            $e->id = $id;
+            array_push($events, $e);
+        }
+        return redirect()->route('about');
+    }
+
+
+    public function destroy($id)
+    {
+        //
+    }
+}
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class DashboardController extends Controller
+{
+
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+
+    public function index()
+    {
+        return view('dashboard');
+    }
+}
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use App\Message;
+use App\User;
+
+class MessagesController extends Controller
+{
+    public function submit(Request $request) {
+        $user_id = auth()->user()->id;
+        $message = new Message;
+        $message->message = $request->input('message');
+        $message->subject = $request->input('subject');
+        $message->user_id = $user_id;
+        $message->save();
+        $subject = $request->input('subject');
+        $to_mail = 'bedavi.m96@gmail.com';
+        $data = array(
+            'name' => auth()->user()->firstname.' '.auth()->user()->lastname,
+            'body' => $request->input('message')
+        );
+        Mail::send('mail', $data, function($message) use ($to_mail, $subject) {
+            $message->to($to_mail)
+            ->subject($subject);
+        });
+
+        return redirect('/')->withSuccess('Your message has been sent successfully!');
+    }
+
+    public function getMessages() {
+        // $messages = Message::all();
+        $users = User::all();
+        $data = [
+            'users' => $users,
+            'selected_user' => null
+        ];
+        return view('messages')->with($data);
+    }
+
+    public function getUserMessages($id) {
+        // $messages = Message::all();
+        $users = User::all();
+        $user = User::find($id);
+        $messages = $user->messages;
+        $data = [
+            'users' => $users,
+            'selected_user' => $user,
+            'messages' => $messages
+        ];
+        return view('messages')->with($data);
+    }
+}
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Announcement;
+use App\CV;
+use App\Skill;
+use App\Event;
+
+class PagesController extends Controller
+{
+    public function getHome() {
+
+        $anns = Announcement::orderBy('created_at', 'DESC')->take(4)->get();
+        return view('home')->with(['anns' => $anns]);
+    }
+
+    public function getAbout() {
+        $cv = CV::all();
+        if(count($cv) == 1){
+            $cv = $cv[0];
+            $skills = $cv->skills;
+            $events = $cv->events;
+            $data = array(
+                'cv' => $cv,
+                'skills' => $skills,
+                'events' => $events
+            );
+            return view('about')->with($data);
+        } else {
+            return redirect('/')->withErrors('No CV has been found!');
+        }
+
+
+    }
+
+    public function getContact() {
+        $user = auth()->user();
+        if($user == null) {
+            return redirect('/')->withErrors('You need to be logged in to contact us');
+        }
+        else {
+            if(auth()->user()->getRole() == 'admin') {
+                return redirect('/messages');
+            } else {
+                $user->birthday = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $user->birthday)->format('Y-m-d');
+                return view('contact')->with('user', $user);
+            }
+
+        }
+    }
+
+    public function getProjects() {
+        return view('projects');
+    }
+
+    public function getExperiences() {
+        return view('experiences');
+    }
+
+    public function getSearchResults(Request $request) {
+        $term = $request->input('term');
+        $elements = Announcement::where('subject', 'like', '%'.$term.'%')->
+        orWhere('content', 'like', '%'.$term.'%')->orderBy('created_at', 'DESC')->take(4)->
+        get();
+        return view('results')->with('elements', $elements);
+    }
+}
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use App\User;
+
+class UsersController extends Controller
+{
+
+    public function index()
+    {
+        $users = User::all();
+        return view('user.index')->with('users', $users);
+    }
+
+
+    public function create()
+    {
+        return view('user.create');
+    }
+
+
+    public function store(Request $request)
+    {
+        $this->validate($request, [
+            'firstname' => 'required',
+            'lastname' => 'required',
+            'birthday' => 'required',
+            'email' => 'required',
+            'password' => 'required',
+            'phone' => 'required',
+            'role' => 'required'
+
+        ]);
+
+        $user = new User;
+        $user->firstname = $request->input('firstname');
+        $user->lastname = $request->input('lastname');
+        $user->birthday = $request->input('birthday');
+        $user->email = $request->input('email');
+        $user->phone = $request->input('phone');
+        $user->password = Hash::make($request->input('password'));
+        if($request->input('role') == 'admin'){
+            $user->role_id = 1;
+        } else if($request->input('role') == 'member') {
+            $user->role_id = 2;
+        } else {
+            $user->role_id = 3;
+        }
+        $user->save();
+        return redirect('/user')->withSuccess('A new user has been added successfully!');
+    }
+
+
+    public function show($id)
+    {
+        //
+    }
+
+
+    public function edit($id)
+    {
+        $user = User::find($id);
+        $user->birthday = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $user->birthday)->format('Y-m-d');
+        return view('user.edit')->with('user', $user);
+    }
+
+
+    public function update(Request $request, $id)
+    {
+
+        $this->validate($request, [
+            'firstname' => 'required',
+            'lastname' => 'required',
+            'birthday' => 'required',
+            'email' => 'required',
+            'phone' => 'required',
+        ]);
+
+        $user = User::find($id);
+        $user->firstname = $request->input('firstname');
+        $user->lastname = $request->input('lastname');
+        $user->birthday = $request->input('birthday');
+        $user->email = $request->input('email');
+        $user->phone = $request->input('phone');
+        if($request->input('password') != '') {
+            $user->password = Hash::make($request->input('password'));
+        }
+
+        if(auth()->user()->getRole() == 'admin'){
+            if($request->input('role') == 'admin'){
+                $user->role_id = 1;
+            } else if($request->input('role') == 'member') {
+                $user->role_id = 2;
+            } else {
+                $user->role_id = 3;
+            }
+        }
+        $user->save();
+        if(auth()->user()->getRole() == 'admin'){
+            return redirect('/user')->withSuccess('A new user has been updated successfully!');
+        } else {
+            return redirect('/dashboard')->withSuccess('Your info has been updated successfully!');
+        }
+    }
+
+
+    public function destroy($id)
+    {
+        //
+    }
+}
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Announcement extends Model
+{
+    protected $fillable = [
+        'subject', 'content'
+    ];
+    public function user() {
+        return $this->belongsTo('App\User');
+    }
+}
+
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+
+class CV extends Model
+{
+    protected $table = 'c_v_s';
+
+    protected $fillable = [
+        'lead', 'description'
+    ];
+
+    public function skills() {
+        return $this->hasMany('App\Skill', 'c_v_s_id');
+    }
+    public function events() {
+        return $this->hasMany('App\Event', 'c_v_s_id');
+    }
+}
+
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Event extends Model
+{
+    protected $fillable = [
+        'description'
+    ];
+
+    public function cv() {
+        return $this->BelongsTo('App\CV');
+    }
+}
+
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Message extends Model
+{
+    protected $fillable = [
+        'subject','message',
+    ];
+
+    public function user() {
+        return $this->belongsTo('App\User');
+    }
+}
+
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Role extends Model
+{
+    protected $fillable = [
+        'name'
+    ];
+
+    public function user() {
+        return $this->belongsTo('App\User');
+    }
+}
+
+<?php
+
+namespace App;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Skill extends Model
+{
+    protected $fillable = [
+        'name', 'percents'
+    ];
+
+    public function cv() {
+        return $this->BelongsTo('App\CV');
+    }
+}
+
+<?php
+
+namespace App;
+
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use App\Role;
+
+class User extends Authenticatable
+{
+    use Notifiable;
+
+
+    protected $fillable = [
+        'firstname','lastname','birthday','phone', 'email', 'password','role_id'
+    ];
+
+
+    protected $hidden = [
+        'password', 'remember_token',
+    ];
+
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+    ];
+
+    public function announcements() {
+        return $this->hasMany('App\Announcement');
+    }
+
+    public function messages() {
+        return $this->hasMany('App\Message');
+    }
+
+    public function role() {
+        return $this->hasOne('App\Role');
+    }
+
+    public function getRole() {
+        if (Role::find($this->role_id)->name == 'admin'){
+            return 'admin';
+        } else if (Role::find($this->role_id)->name ==  'member'){
+            return 'member';
+        } else {
+            return 'guest';
+        }
+    }
+
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateUsersTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('firstname');
+            $table->string('lastname');
+            $table->string('phone');
+            $table->timestamp('birthday');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->integer('role_id');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('users');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreatePasswordResetsTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('password_resets', function (Blueprint $table) {
+            $table->string('email')->index();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+    }
+
+
+    public function down()
+    {
+        Schema::dropIfExists('password_resets');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateMessagesTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('messages', function (Blueprint $table) {
+            $table->id();
+            $table->integer('user_id');
+            $table->string('subject');
+            $table->mediumText('message');
+            $table->timestamps();
+        });
+    }
+
+
+    public function down()
+    {
+        Schema::dropIfExists('messages');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateRolesTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+    }
+
+
+    public function down()
+    {
+        Schema::dropIfExists('roles');
+    }
+}
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateRolesTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+    }
+
+
+    public function down()
+    {
+        Schema::dropIfExists('roles');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateAnnouncementsTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('announcements', function (Blueprint $table) {
+            $table->id();
+            $table->integer('user_id');
+            $table->string('subject');
+            $table->string('content');
+            $table->timestamps();
+        });
+    }
+
+
+    public function down()
+    {
+        Schema::dropIfExists('announcements');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateCVSTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('c_v_s', function (Blueprint $table) {
+            $table->id();
+            $table->string('lead');
+            $table->string('description');
+            $table->timestamps();
+        });
+    }
+
+
+    public function down()
+    {
+        Schema::dropIfExists('c_v_s');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateSkillsTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('skills', function (Blueprint $table) {
+            $table->id();
+            $table->integer('c_v_s_id');
+            $table->string('name');
+            $table->integer('percent');
+            $table->timestamps();
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('skills');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateEventsTable extends Migration
+{
+
+    public function up()
+    {
+        Schema::create('events', function (Blueprint $table) {
+            $table->id();
+            $table->integer('c_v_s_id');
+            $table->string('description');
+            $table->timestamps();
+        });
+    }
+
+
+    public function down()
+    {
+        Schema::dropIfExists('events');
+    }
+}
+
+<?php
+
+use Illuminate\Database\Seeder;
+
+class RoleSeeder extends Seeder
+{
+
+    public function run()
+    {
+        DB::table('roles')->insert([
+            'name' => 'admin',
+        ]);
+        DB::table('roles')->insert([
+            'name' => 'member',
+        ]);
+        DB::table('roles')->insert([
+            'name' => 'guest',
+        ]);
+    }
+}
+
+.container {
+  max-width: 1280px;
+  padding: 0 1.5rem;
+  margin: auto;
+  overflow: visible;
+}
+
+.btn-dark,
+.btn-light,
+.btn-main {
+  display: inline-block;
+  padding: 0.8rem 2rem;
+  transition: all 0.5s;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-main {
+  color: #181818;
+  background-color: #f15a24;
+}
+
+.btn-light {
+  color: #181818;
+  background-color: #efefef;
+}
+
+.btn-dark {
+  color: #efefef;
+  background-color: #181818;
+}
+
+button[class^=btn-]:hover,
+a[class^=btn-]:hover,
+input[class^=btn-]:hover {
+  background-color: #f15a24;
+}
+
+.lead {
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.py-1 {
+  padding: 1rem 0rem;
+}
+
+.py-2 {
+  padding: 2rem 0rem;
+}
+
+.py-3 {
+  padding: 3rem 0rem;
+}
+
+.py-4 {
+  padding: 4rem 0rem;
+}
+
+.my-1 {
+  margin: 1rem 0rem;
+}
+
+.my-2 {
+  margin: 2rem 0rem;
+}
+
+.my-3 {
+  margin: 3rem 0rem;
+}
+
+.my-4 {
+  margin: 4rem 0rem;
+}
+
+.bottom-line {
+  height: 3px;
+  width: 7rem;
+  background: #f15a24;
+  display: block;
+  margin: 1rem auto 1rem auto;
+}
+
+.section-subject {
+  font-size: 2rem;
+  display: block;
+  padding-bottom: 0.5rem;
+  text-align: center;
+  font-weight: 100;
+  text-transform: uppercase;
+}
+
+.bg-primary {
+  background: #f15a24;
+  color: #181818;
+}
+
+.bg-dark {
+  background: #181818;
+  color: #efefef;
+}
+
+.bg-light {
+  background: #efefef;
+  color: #181818;
+}
+
+.bg-medium {
+  background: #dddddd;
+  color: #181818;
+}
+
+.bg-secondary {
+  background: #002639;
+  color: #efefef;
+}
+
+.progress {
+  overflow: hidden;
+  height: 20px;
+  background: #dddddd;
+  border-radius: 5px;
+  margin-bottom: 0.6rem;
+}
+
+.progress div {
+  height: 100%;
+  color: #efefef;
+  text-align: center;
+  background: #f15a24;
+}
+
+.items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 0.4);
+}
+
+.item {
+  position: relative;
+  background: #f15a24;
+  overflow: hidden;
+}
+
+.item::after {
+  content: "";
+  position: absolute;
+  display: block;
+  background: inherit;
+  opacity: 0.9;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: scale(2) translateX(-75%) translateY(-75%) rotate(-28deg);
+  transition: transform 3s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+.item:hover:after {
+  transform: scale(2) translateX(0) translateY(0) rotate(-28deg);
+}
+
+.item:hover .item-image {
+  transform: scale(1.2);
+}
+
+.item:hover .item-text {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.item-image {
+  height: auto;
+  transform: translateZ(0);
+  display: block;
+  transition: transform 750ms cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+.item-image:before {
+  content: "";
+  display: block;
+  padding-top: 75%;
+  overflow: hidden;
+}
+
+.item-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  line-height: 0;
+}
+
+.item-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  opacity: 0;
+  text-align: center;
+  z-index: 1;
+  color: #fff;
+  transform: translateY(-20%);
+  transition: opacity 500ms cubic-bezier(0.2, 1, 0.3, 1), transform 500ms cubic-bezier(0.2, 1, 0.3, 1);
+  transition-delay: 300ms;
+}
+
+.item-text-wrap {
+  position: absolute;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.item-text-title {
+  font-size: 2rem;
+  padding: 0 1rem;
+  margin: 5px 0 0 0;
+}
+
+.item-text-category {
+  text-transform: uppercase;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  margin: 0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Raleway", sans-serif;
+  line-height: 1.5;
+  background: #efefef;
+}
+
+body #topBtn {
+  text-align: center;
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  background-color: #f15a24;
+  border: none;
+  cursor: pointer;
+  display: none;
+}
+
+a {
+  color: #181818;
+  text-decoration: none;
+}
+
+ul {
+  list-style-type: none;
+}
+
+h2,
+h3,
+h4 {
+  text-transform: uppercase;
+}
+
+img {
+  width: 100%;
+}
+
+.hide {
+  display: none;
+}
+
+#logo {
+  width: 200px;
+  height: auto;
+  align-self: flex-start;
+}
+
+#main-nav {
+  overflow: visible;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1rem;
+  height: 4.5rem;
+}
+
+#main-nav .top-ul {
+  display: flex;
+}
+
+#main-nav .top-li {
+  padding: 1rem 1.5rem;
+  position: relative;
+}
+
+#main-nav .top-li .in-ul {
+  list-style: none;
+  display: none;
+}
+
+#main-nav .top-li .in-ul .in-li {
+  padding: 1rem 1.5rem;
+}
+
+#main-nav .top-li:hover {
+  cursor: pointer;
+}
+
+#main-nav .top-li:hover ul {
+  display: block;
+  position: absolute;
+  overflow: visible;
+  z-index: 7;
+  left: 1.5rem;
+  width: 200px;
+  margin-top: 1rem;
+}
+
+#main-nav .top-li:hover ul li {
+  display: block;
+  background: #002639;
+}
+
+#main-nav .top-li:hover ul li:hover {
+  background: #f15a24;
+}
+
+#main-nav .top-li:hover ul li a {
+  color: #efefef;
+}
+
+#main-nav .top-li:hover .top-link {
+  border-color: #002639;
+}
+
+#main-nav .top-link {
+  text-decoration: none;
+  color: #181818;
+  text-transform: uppercase;
+  border-bottom: 3px transparent solid;
+  padding-bottom: 0.5rem;
+  transition: border-color 0.5s;
+}
+
+#main-nav .current {
+  border-color: #f15a24;
+}
+
+#header-home {
+  position: relative;
+  height: 100vh;
+  height: 100vh;
+  color: #181818;
+}
+
+#header-home #slider,
+#header-home .wrap,
+#header-home .slide {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+#header-home .wrap {
+  position: relative;
+}
+
+#header-home .slide {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+#header-home .slide1 {
+  background-image: url(/images/showcase.jpg?6050de48ef658e261ab33664d455e6f1);
+}
+
+#header-home .slide2 {
+  background-image: url(/images/slide2.jpg?dfb3f23ce6bcc245314f1e90860e18b9);
+}
+
+#header-home .slide3 {
+  background-image: url(/images/slide3.jpg?9c88fcd446a944499e32700e4ace4076);
+}
+
+#header-home .arrow {
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  margin-top: -35px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+#header-home #arrow-left {
+  border-width: 30px 40px 30px 0;
+  border-color: transparent #fff transparent transparent;
+  left: 0;
+  margin-left: 30px;
+  z-index: 5;
+}
+
+#header-home #arrow-right {
+  border-width: 30px 0 30px 40px;
+  border-color: transparent transparent transparent #fff;
+  right: 0;
+  margin-right: 30px;
+  z-index: 5;
+}
+
+#header-home .landing {
+  height: 100vh;
+  width: 100%;
+  position: absolute;
+  top: 0;
+}
+
+#header-home .header-content {
+  width: 80%;
+  margin: 0 auto;
+  text-align: center;
+  padding-top: 10%;
+}
+
+#header-home h1 {
+  font-size: 3.2rem;
+  line-height: 1.2;
+}
+
+#header-inner {
+  background: url(/images/showcase.jpg?6050de48ef658e261ab33664d455e6f1) no-repeat 10% 50%/cover;
+  height: 5.5rem;
+  border-bottom: 3px solid #f15a24;
+}
+
+#home-a .news {
+  margin-top: 3rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#home-a .news .img-4,
+#home-a .news .img-3,
+#home-a .news .img-2,
+#home-a .news .img-1 {
+  height: 12rem;
+  padding-bottom: 0.4rem;
+}
+
+#home-a .news .img-1 {
+  background: url(/images/1.jpg?7432853aa47c7df9e4a73dfdfc9cfaa7) no-repeat top center/cover;
+}
+
+#home-a .news .img-2 {
+  background: url(/images/2.jpg?31edeea7bc86fc474bac0436d78551ea) no-repeat top center/cover;
+}
+
+#home-a .news .img-3 {
+  background: url(/images/3.jpg?b62fb31f3d4fe9b71895d802ed607355) no-repeat top center/cover;
+}
+
+#home-a .news .img-4 {
+  background: url(/images/4.jpg?af0c1a44d4c094d59df6d86922071301) no-repeat top center/cover;
+}
+
+#home-a .news p,
+#home-a .news h3 {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+#home-b .stats {
+  color: #efefef;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#home-b .stats li {
+  line-height: 2;
+}
+
+#home-b .stats li.stats-title {
+  font-size: 1.5rem;
+}
+
+#home-b .stats li.stats-number {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+#home-b .stats div {
+  padding: 3rem 0;
+}
+
+#home-b .stats div:nth-child(odd) {
+  background: #f15a24;
+}
+
+#home-b .stats div:nth-child(even) {
+  background: #002639;
+}
+
+#home-c .announcement {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  text-align: center;
+}
+
+#home-c .announcement .img-4,
+#home-c .announcement .img-3,
+#home-c .announcement .img-2,
+#home-c .announcement .img-1 {
+  height: 12rem;
+  padding-bottom: 0.4rem;
+}
+
+#home-c .announcement .img-1 {
+  background: url(/images/1.jpg?7432853aa47c7df9e4a73dfdfc9cfaa7) no-repeat top center/cover;
+}
+
+#home-c .announcement .img-2 {
+  background: url(/images/2.jpg?31edeea7bc86fc474bac0436d78551ea) no-repeat top center/cover;
+}
+
+#home-c .announcement .img-3 {
+  background: url(/images/3.jpg?b62fb31f3d4fe9b71895d802ed607355) no-repeat top center/cover;
+}
+
+#home-c .announcement .img-4 {
+  background: url(/images/4.jpg?af0c1a44d4c094d59df6d86922071301) no-repeat top center/cover;
+}
+
+#experiences-a .specials {
+  margin-top: 3rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#experiences-a .specials .fas {
+  color: #f15a24;
+  padding-bottom: 0.4rem;
+}
+
+#experiences-b video {
+  width: 100%;
+}
+
+#experiences-c .process {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  text-align: center;
+}
+
+#experiences-c .process-step {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 28px;
+  background: #f15a24;
+  border-radius: 50%;
+  height: 15px;
+  height: 15px;
+  line-height: 15px;
+  padding: 1rem;
+  transition: all 1s;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: lighter;
+}
+
+#experiences-c .process-icon {
+  border-radius: 50%;
+  background: #002639;
+  color: #efefef;
+  padding: 2rem;
+  width: 70px;
+  height: 70px;
+  line-height: 70px;
+  text-align: center;
+  position: relative;
+  transition: all 1s;
+}
+
+#experiences-c .process-icon:hover {
+  background: #f15a24;
+  width: 90px;
+  height: 90px;
+  line-height: 90px;
+}
+
+#experiences-c .process-icon:hover .process-step {
+  background: #002639;
+}
+
+#about-a .about-info {
+  display: grid;
+  grid-template-areas: "bioimage bio bio" "aw1 aw2 aw3";
+  gap: 1.2rem;
+}
+
+#about-a .bio-image {
+  background: url(/images/about.jpg?8e8bc3af14336b2f3af526f1cf2b92c3) no-repeat top right/cover;
+  grid-area: bioimage;
+  align-self: center;
+  height: 200px;
+}
+
+#about-a .bio {
+  grid-area: bio;
+  border-left: 3px solid #f15a24;
+  padding: 0.8rem;
+  background: #dddddd;
+}
+
+#about-a .award-1 {
+  grid-area: aw1;
+}
+
+#about-a .award-2 {
+  grid-area: aw2;
+}
+
+#about-a .award-3 {
+  grid-area: aw3;
+}
+
+#about-a .award-1 .fas,
+#about-a .award-2 .fas,
+#about-a .award-3 .fas {
+  color: #f15a24;
+  margin: 1rem;
+}
+
+#about-c .timeline {
+  min-width: 300px;
+  max-width: 80%;
+  margin: auto;
+}
+
+#about-c .timeline p {
+  font-size: 1em;
+  line-height: 1.75em;
+  border-top: 3px solid;
+  -o-border-image: linear-gradient(to right, #f12711 0%, #f15a24 100%);
+     border-image: linear-gradient(to right, #f12711 0%, #f15a24 100%);
+  border-image-slice: 1;
+  border-width: 3px;
+  margin: 0;
+  padding: 40px;
+  counter-increment: section;
+  position: relative;
+  color: #181818;
+}
+
+#about-c .timeline p:before {
+  content: counter(section);
+  position: absolute;
+  border-radius: 50%;
+  padding: 10px;
+  height: 1.25em;
+  width: 1.25em;
+  background-color: #002639;
+  text-align: center;
+  line-height: 1.25em;
+  color: #efefef;
+  font-size: 1em;
+}
+
+#about-c .timeline p:nth-child(odd) {
+  border-right: 3px solid;
+  padding-left: 0;
+}
+
+#about-c .timeline p:nth-child(odd):before {
+  left: 100%;
+  margin-left: -20px;
+}
+
+#about-c .timeline p:nth-child(even) {
+  border-left: 3px solid;
+  padding-right: 0;
+}
+
+#about-c .timeline p:nth-child(even):before {
+  right: 100%;
+  margin-right: -20px;
+}
+
+#about-c .timeline p:first-child {
+  border-top: 0;
+  border-top-right-radius: 0;
+  border-top-left-radius: 0;
+}
+
+#about-c .timeline p:last-child {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+#about-d .testimonials {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+#about-d .testimonials ul {
+  list-style: none;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+#about-d .testimonials p {
+  border: 1px solid #dddddd;
+  border-radius: 5px;
+  padding: 0.5rem;
+}
+
+#about-d .testimonials img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+#references-a .ref-info {
+  display: grid;
+  grid-template-areas: "aw1 aw2 aw3";
+  gap: 1.2rem;
+}
+
+#references-a .ref-1 {
+  grid-area: aw1;
+}
+
+#references-a .ref-2 {
+  grid-area: aw2;
+}
+
+#references-a .ref-3 {
+  grid-area: aw3;
+}
+
+#references-a .ref-1 img,
+#references-a .ref-2 img,
+#references-a .ref-3 img {
+  height: 100px;
+  width: auto;
+  margin: 1rem;
+}
+
+#references-a h3 {
+  color: #f15a24;
+}
+
+#references-c .about-logos {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+}
+
+#references-c .about-logos img {
+  width: 70%;
+}
+
+#references-d .testimonials {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+#references-d .testimonials ul {
+  list-style: none;
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+#references-d .testimonials p {
+  border: 1px solid #dddddd;
+  border-radius: 5px;
+  padding: 0.5rem;
+}
+
+#references-d .testimonials img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+#contact-a .container {
+  width: 50%;
+}
+
+#contact-a .text-fields {
+  display: grid;
+  grid-template-areas: "fname lname bdate" "mail phone phone" "subject subject subject" "message message message";
+  gap: 1.2rem;
+  margin-bottom: 1.2rem;
+}
+
+#contact-a .text-fields .first-name-input {
+  grid-area: fname;
+}
+
+#contact-a .text-fields .last-name-input {
+  grid-area: lname;
+}
+
+#contact-a .text-fields .date-input {
+  grid-area: bdate;
+}
+
+#contact-a .text-fields .email-input {
+  grid-area: mail;
+}
+
+#contact-a .text-fields .phone-input {
+  grid-area: phone;
+}
+
+#contact-a .text-fields .subject-input {
+  grid-area: subject;
+}
+
+#contact-a .text-fields .message-input {
+  grid-area: message;
+  height: 120px;
+}
+
+#contact-a .text-fields .text-input {
+  padding: 0.5rem 1rem;
+  border: none;
+}
+
+#contact-a button[type=submit] {
+  width: 50%;
+}
+
+#contact-b .contact-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  text-align: center;
+}
+
+#contact-b .contact-info a {
+  color: #efefef;
+}
+
+#contact-c h1 {
+  text-align: center;
+  font-size: 4rem;
+}
+
+#project-a {
+  background: no-repeat top center/cover;
+  height: 50vh;
+  display: flex;
+}
+
+#project-a h2 {
+  font-size: 4rem;
+}
+
+#project-b {
+  text-align: center;
+}
+
+#project-b .techs {
+  margin-top: 3rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#project-b .techs .fas {
+  color: #f15a24;
+  padding-bottom: 0.4rem;
+}
+
+#ref-a {
+  background: no-repeat top center/cover;
+  height: 50vh;
+  display: flex;
+}
+
+#ref-a h2 {
+  font-size: 4rem;
+}
+
+#ref-b {
+  text-align: center;
+}
+
+#ref-b .techs {
+  margin-top: 3rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#ref-b .techs .fas {
+  color: #f15a24;
+  padding-bottom: 0.4rem;
+}
+
+#main-footer {
+  background: #002639;
+  color: #efefef;
+  height: auto;
+  text-align: center;
+  padding-bottom: 1rem;
+}
+
+#main-footer .footer-content {
+  padding: 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  height: auto;
+  align-items: center;
+}
+
+#main-footer .footer-content .personal-info {
+  margin-left: 1rem;
+  align-self: center;
+  text-align: left;
+}
+
+#main-footer .footer-content .contact-info {
+  align-self: center;
+  text-align: center;
+}
+
+#main-footer .footer-content .social a .fab {
+  margin-right: 1rem;
+  border: 2px #efefef solid;
+  border-radius: 50%;
+  height: 20px;
+  width: 20px;
+  line-height: 20px;
+  text-align: center;
+  padding: 0.5rem;
+  color: #efefef;
+}
+
+#main-footer .footer-content .social a .fab:hover {
+  background: #f15a24;
+}
+
+@media (max-width: 1100px) {
+  #header-home {
+    height: 30rem;
+  }
+
+  #header-home .header-content {
+    padding-top: 5rem;
+  }
+
+  #header-home .header-content h1 {
+    font-size: 2rem;
+  }
+
+  #main-nav .top-ul {
+    display: block;
+  }
+
+  #main-nav .top-li {
+    padding: 1rem 1.5rem;
+    position: relative;
+  }
+
+  #main-nav .top-li .in-ul {
+    list-style: none;
+    display: none;
+  }
+
+  #main-nav .top-li .in-ul .in-li {
+    padding: 1rem 1.5rem;
+  }
+
+  #main-nav .top-li:hover {
+    cursor: pointer;
+  }
+
+  #main-nav .top-li:hover ul {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 13.5rem;
+    width: 200px;
+    margin-top: 1rem;
+  }
+
+  #main-nav .top-li:hover ul li {
+    display: block;
+    background: #002639;
+  }
+
+  #main-nav .top-li:hover ul li:hover {
+    background: #efefef;
+  }
+
+  #main-nav .top-li:hover ul li a {
+    color: #efefef;
+  }
+
+  #main-nav .top-li:hover ul li:hover a {
+    color: #f15a24;
+  }
+
+  #main-nav .top-li:hover .top-link {
+    border-color: #002639;
+  }
+
+  .hide {
+    display: block;
+  }
+
+  .menu-wrap {
+    position: absolute;
+    top: 16;
+    right: 0;
+    z-index: 5;
+  }
+
+  .menu-wrap .toggler {
+    position: absolute;
+    top: 16;
+    right: 0;
+    z-index: 6;
+    cursor: pointer;
+    width: 60px;
+    height: 60px;
+    opacity: 0;
+  }
+
+  .menu-wrap .hamburger {
+    position: absolute;
+    top: 16;
+    right: 0;
+    z-index: 5;
+    width: 30px;
+    height: 30px;
+    padding: 1rem;
+    background: #f15a24;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hamburger Line */
+
+  .menu-wrap .hamburger > div {
+    position: relative;
+    flex: none;
+    width: 100%;
+    height: 2px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s ease;
+  }
+
+  /* Hamburger Lines - Top & Bottom */
+
+  .menu-wrap .hamburger > div::before,
+  .menu-wrap .hamburger > div::after {
+    content: "";
+    position: absolute;
+    z-index: 5;
+    top: -10px;
+    width: 100%;
+    height: 2px;
+    background: inherit;
+  }
+
+  /* Moves Line Down */
+
+  .menu-wrap .hamburger > div::after {
+    top: 10px;
+  }
+
+  /* Toggler Animation */
+
+  .menu-wrap .toggler:checked + .hamburger > div {
+    transform: rotate(135deg);
+  }
+
+  /* Turns Lines Into X */
+
+  .menu-wrap .toggler:checked + .hamburger > div:before,
+  .menu-wrap .toggler:checked + .hamburger > div:after {
+    top: 0;
+    transform: rotate(90deg);
+  }
+
+  /* Rotate On Hover When Checked */
+
+  .menu-wrap .toggler:checked:hover + .hamburger > div {
+    transform: rotate(225deg);
+  }
+
+  /* Show Menu */
+
+  .menu-wrap .toggler:checked ~ .menu {
+    visibility: visible;
+  }
+
+  .menu-wrap .toggler:checked ~ .menu > div {
+    transform: scale(1);
+    transition-duration: 0.75s;
+  }
+
+  .menu-wrap .toggler:checked ~ .menu > div > div {
+    opacity: 1;
+    transition: opacity 0.4s ease 0.4s;
+  }
+
+  .menu-wrap .menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .menu-wrap .menu > div {
+    background: rgba(241, 90, 36, 0.95);
+    border-radius: 50%;
+    width: 300vw;
+    height: 300vw;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    transform: scale(0);
+    transition: all 0.4s ease;
+  }
+
+  .menu-wrap .menu > div > div {
+    text-align: center;
+    max-width: 90vw;
+    max-height: 100vh;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .menu-wrap .menu > div > div > ul > li {
+    list-style: none;
+    color: #fff;
+    font-size: 1.5rem;
+    padding: 1rem;
+  }
+
+  .menu-wrap .menu > div > div > ul > li > a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.4s ease;
+  }
+
+  .menu-wrap .menu > div > div > ul > li > a:hover {
+    color: #002639;
+  }
+}
+
+@media (max-width: 800px) {
+  #header-home {
+    height: 30rem;
+  }
+
+  #header-home .header-content {
+    padding-top: 5rem;
+  }
+
+  #header-home .header-content h1 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 680px) {
+  #main-nav {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #main-nav li {
+    padding: 1rem;
+  }
+
+  #header-home {
+    height: 10rem;
+    border-bottom: 3px solid #f15a24;
+  }
+
+  #header-home .arrow {
+    display: none;
+  }
+
+  #header-home .header-content {
+    display: none;
+  }
+
+  #header-inner {
+    height: 10rem;
+  }
+
+  #home-a .news,
+  #home-b .stats,
+  #home-c .announcement,
+  #references-d .testimonials,
+  #experiences-a .specials,
+  #experiences-b .stats,
+  #experiences-c .process,
+  #about-d .testimonials,
+  #contact-b .contact-info,
+  #project-b .techs,
+  #ref-b .techs,
+  .items {
+    grid-template-columns: 1fr;
+  }
+
+  #home-a .news div {
+    border-bottom: 1px #dddddd solid;
+    padding-bottom: 1rem;
+  }
+
+  #home-a .news div:last-child {
+    border: none;
+    padding-bottom: 0;
+  }
+
+  #home-b .stats div {
+    padding: 2rem 0 1rem 0;
+  }
+
+  #home-c .announcement div {
+    border-bottom: 1px #dddddd solid;
+    padding-bottom: 1rem;
+  }
+
+  #home-c .announcement div:last-child {
+    border: none;
+    padding-bottom: 0;
+  }
+
+  #experiences-a .specials div {
+    border-bottom: 1px #dddddd solid;
+    padding-bottom: 1rem;
+  }
+
+  #experiences-a .specials div:last-child {
+    border: none;
+    padding-bottom: 0;
+  }
+
+  #experiences-b .stats div {
+    padding: 2rem 0 1rem 0;
+  }
+
+  #about-a .about-info {
+    grid-template-areas: "bioimage" "bio" "aw1" "aw2" "aw3";
+  }
+
+  #references-a .ref-info {
+    grid-template-areas: "aw1" "aw2" "aw3";
+  }
+
+  #references-c {
+    display: none;
+  }
+
+  #contact-a .text-fields {
+    grid-template-areas: "fname" "lname" "bdate" "mail" "phone" "subject" "message";
+  }
+
+  #contact-b div {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px #dddddd solid;
+  }
+
+  #contact-b div:last-child {
+    border: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  #contact-c h1 {
+    font-size: 2rem;
+  }
+
+  #main-footer {
+    height: auto;
+  }
+
+  #main-footer .footer-content {
+    flex-direction: column;
+    padding: 1rem;
+    height: auto;
+  }
+
+  #main-footer .footer-content .personal-info {
+    margin-bottom: 1rem;
+    margin-left: 0;
+    text-align: center;
+  }
+
+  #main-footer .footer-content .contact-info {
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+}
+
+@media (max-height: 580px) {
+  #header-home .header-content {
+    padding-top: 3rem;
+  }
+
+  #main-nav .top-li {
+    padding: 0.5rem 1.5rem;
+  }
+}
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="bgc-white p-20 bd">
+    <h6 class="c-grey-900">Create a new announcement</h6>
+    <div class="mT-30">
+        {!! Form::open(['route' => 'announcement.store']) !!}
+        <div class="form-group">
+            <label>Subject</label>
+            {{Form::text('subject', '', ['class' => 'form-control', 'id' => 'firstname', 'placeholder' => 'Enter subject'])}}
+        </div>
+            <div class="form-group">
+            <label>Content</label>
+            {{Form::textarea('content', '', ['class' => 'form-control','placeholder' => 'Enter content'])}}
+        </div>
+            {{Form::submit('Create', ['class' => 'btn btn-primary'])}}
+        {!! Form::close() !!}
+    </div>
+</div>
+@endsection
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="bgc-white p-20 bd">
+    <h6 class="c-grey-900">Edit announcement</h6>
+    <div class="mT-30">
+        {!! Form::open(['route' => ['announcement.update',$announcement->id]]) !!}
+        <div class="form-group">
+            <label>Subject</label>
+            {{Form::text('subject', $announcement->subject, ['class' => 'form-control', 'id' => 'firstname', 'placeholder' => 'Enter subject'])}}
+        </div>
+            <div class="form-group">
+            <label>Content</label>
+            {{Form::textarea('content', $announcement->content, ['class' => 'form-control','placeholder' => 'Enter content'])}}
+        </div>
+        {{Form::hidden('_method', 'PUT')}}
+        {{Form::submit('Update', ['class' => 'btn btn-primary'])}}
+        {!! Form::close() !!}
+    </div>
+</div>
+@endsection
+
+@extends('layouts.include.bars')
+@section('main-content')
+@if(auth()->user()->getRole() == 'admin')
+<a class="btn cur-p btn-success pull-right" style="margin: 10px" href="{{route('announcement.create')}}">Add</a>
+@endif
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">
+                Subject
+            </th>
+            <th scope="col">
+                Content
+            </th>
+            <th scope="col">
+                Date
+            </th>
+            @if(auth()->user()->getRole() == 'admin')
+            <th scope="col">
+                Actions
+            </th>
+            @endif
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($announcements as $announcement)
+        <tr>
+            <th scope="row">{{$announcement->id}}</th>
+            <td>{{$announcement->subject}}</td>
+            <td>{{$announcement->content}}</td>
+            <td>{{$announcement->created_at}}</td>
+            @if(auth()->user()->getRole() == 'admin')
+            <td>
+                <a href="{{ route('announcement.edit', $announcement->id)}}" class="btn btn-sm btn-info" style="margin: 3px;">
+                    <i class="fa fa-pencil"></i>
+                </a>
+                {!! Form::open(['route' => ['announcement.destroy', $announcement->id], 'method' => 'POST', 'class' => 'pull-left']) !!}
+                {{ Form::hidden('_method', 'DELETE')}}
+                {{Form::button('<i class="fas fa-trash"></i>', ['type' => 'submit', 'class' => 'btn btn-sm btn-danger', 'style' => 'margin: 3px;'])}}
+                {!! Form::close() !!}
+            </td>
+            @endif
+        </tr>
+        @endforeach
+    </tbody>
+</table>
+@endsection
+
+
+
+@extends('layouts.include.auth')
+@section('title', 'Reset Password')
+@section('form')
+<div
+                class="col-12 col-md-4 peer pX-40 pY-80 h-100 bgc-white scrollable pos-r"
+                style="min-width: 320px;"
+            >
+            @if (session('status'))
+                        <div class="alert alert-success" role="alert">
+                            {{ session('status') }}
+                        </div>
+                    @endif
+                <h4 class="fw-300 c-grey-900 mB-40">Reset Password</h4>
+                <form method="POST" action="{{ route('password.email') }}">
+                    @csrf
+                    <div class="form-group">
+                        <label class="text-normal text-dark" for="email"
+                            >{{ __('E-Mail Address') }}</label
+                        >
+                        <input
+                            name="email" value="{{ old('email') }}" required autocomplete="email"
+                            type="email"
+                            class="form-control @error('email') is-invalid @enderror"
+                            placeholder="name@email.com"
+                            id="email"
+                        />
+                        @error('email')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" type="submit"> {{ __('Send Password Reset Link') }}</button>
+                    </div>
+                </form>
+            </div>
+@endsection
+
+
+@extends('layouts.include.auth')
+@section('title', 'Login')
+@section('form')
+<div
+                class="col-12 col-md-4 peer pX-40 pY-80 h-100 bgc-white scrollable pos-r"
+                style="min-width: 320px;"
+            >
+                <h4 class="fw-300 c-grey-900 mB-40">Login</h4>
+                <form method="POST" action="{{ route('login') }}">
+                    @csrf
+                    {{ csrf_field() }} {{ method_field('POST') }}
+                    <div class="form-group">
+                        <label class="text-normal text-dark" for="email"
+                            >{{ __('E-Mail Address') }}</label
+                        >
+                        <input
+                            name="email"
+                            value="{{ Cookie::get('email') ? Cookie::get('email') : old('email') }}"
+                            required autocomplete="email"
+                            type="email"
+                            class="form-control @error('email') is-invalid @enderror"
+                            placeholder="name@email.com"
+                            id="email"
+                        />
+                        @error('email')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="text-normal text-dark">{{ __('Password') }}</label>
+                        <input
+                            type="password"
+                            class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password"
+                            placeholder="Password"
+                            id="password"
+                            value="{{Cookie::get('password')}}"
+                        />
+                        @error('password')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <div class="peers ai-c jc-sb fxw-nw">
+                            <div class="peer">
+                                <div
+                                    class="checkbox checkbox-circle checkbox-info peers ai-c"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="peer"
+                                        name="remember"
+                                        id="remember"
+                                        {{ Cookie::get('remember') ? 'checked' : '' }}
+                                    />
+                                    <label
+                                        for="inputCall1"
+                                        class="peers peer-greed js-sb ai-c"
+                                        ><span class="peer peer-greed"
+                                            >{{ __('Remember Me') }}</span
+                                        ></label
+                                    >
+                                </div>
+                            </div>
+                            <div class="peer">
+                                <button class="btn btn-primary" type="submit"> {{ __('Login') }}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        @if (Route::has('password.request'))
+                                    <a class="btn btn-link" href="{{ route('password.request') }}">
+                                        {{ __('Forgot Your Password?') }}
+                                    </a>
+                        @endif
+                    </div>
+                    <div class="form-group">
+
+                        <a class="btn btn-link" href="{{ route('register') }}">
+                            {{ __("Don't have an account? Register Now!") }}
+                        </a>
+                    </div>
+                </form>
+            </div>
+@endsection
+@extends('layouts.include.auth')
+@section('title', 'Register')
+@section('form')
+<div
+                class="col-12 col-md-4 peer pX-40 pY-80 h-100 bgc-white scrollable pos-r"
+                style="min-width: 320px;"
+            >
+                <h4 class="fw-300 c-grey-900 mB-40">Register</h4>
+                <form method="POST" action="{{ route('register') }}">
+                    @csrf
+                    <div class="form-group">
+                        <label for="name" class="text-normal text-dark">{{ __('First Name') }}</label>
+                        <input
+                            name="firstname" value="{{ old('firstname') }}" required autocomplete="firstname" autofocus
+                            type="text"
+                            class="form-control  @error('firstname') is-invalid @enderror"
+                            placeholder="John"
+                            id="firstname"
+                        />
+                        @error('firstname')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <label for="lastname" class="text-normal text-dark">{{ __('Last Name') }}</label>
+                        <input
+                            name="lastname" value="{{ old('lastname') }}" required autocomplete="lastname" autofocus
+                            type="text"
+                            class="form-control  @error('lastname') is-invalid @enderror"
+                            placeholder="Doe"
+                            id="lastname"
+                        />
+                        @error('lastname')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <label for="birthday" class="text-normal text-dark">{{ __('Birthday') }}</label>
+                        <input
+                            name="birthday" value="{{ old('birthday') }}" required autocomplete="birthday" autofocus
+                            type="date"
+                            class="form-control  @error('birthday') is-invalid @enderror"
+                            placeholder="19.04.1996"
+                            id="birthday"
+                        />
+                        @error('birthday')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <label for="phone" class="text-normal text-dark">{{ __('Phone') }}</label>
+                        <input
+                            name="phone" value="{{ old('phone') }}" required autocomplete="phone" autofocus
+                            type="number"
+                            class="form-control  @error('phone') is-invalid @enderror"
+                            placeholder="05310096754"
+                            id="phone"
+                        />
+                        @error('phone')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="text-normal text-dark" for="email"
+                            >{{ __('E-Mail Address') }}</label
+                        >
+                        <input
+                            name="email" value="{{ old('email') }}" required autocomplete="email"
+                            type="email"
+                            class="form-control @error('email') is-invalid @enderror"
+                            placeholder="name@email.com"
+                            id="email"
+                        />
+                        @error('email')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="text-normal text-dark">{{ __('Password') }}</label>
+                        <input
+                            type="password"
+                            class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password"
+                            placeholder="Password"
+                            id="password"
+                        />
+                        @error('password')
+                                    <span class="invalid-feedback" role="alert">
+                                        <strong>{{ $message }}</strong>
+                                    </span>
+                        @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="text-normal text-dark"
+                            >{{ __('Confirm Password') }}</label
+                        >
+                        <input
+                            type="password"
+                            class="form-control"
+                            placeholder="Password"
+                            id="password-confirm"
+                            name="password_confirmation" required autocomplete="new-password"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">
+                            {{ __('Register') }}
+                        </button>
+                    </div>
+                    <div class="form-group">
+
+                        <a class="btn btn-link" href="{{ route('login') }}">
+                            {{ __("Already have an account? Login Now!") }}
+                        </a>
+                    </div>
+                </form>
+            </div>
+@endsection
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="bgc-white p-20 bd">
+    <h6 class="c-grey-900">Create CV</h6>
+    <div class="mT-30">
+        {!! Form::open(['route' => 'cv.store']) !!}
+
+        <div class="form-group">
+            <label>Lead</label>
+            {{Form::text('lead', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Lead'])}}
+        </div>
+        <div class="form-group">
+            <label>Description:</label>
+            {{Form::textarea('description', '', ['class' => 'form-control', 'placeholder' => 'Enter Description', 'rows' => 4])}}
+        </div>
+        <hr>
+        <div>
+
+            <div class="row">
+                <div class="col-md-9">
+                    <h2>Skills</h2>
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-block btn-success" style="margin-top: 25px" id="add-button">
+                        <i class="fa fa-plus"></i> Ekle
+                    </button>
+                </div>
+
+            </div>
+            <div class="box-body" id="box-body">
+                <div class="form-group">
+                    <div class="form-group">
+                        <label>Skill</label>
+                        {{Form::text('skill[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Skill'])}}
+                    </div>
+                    <div class="form-group">
+                        <label>Percent</label>
+                        {{Form::number('percent[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Percent'])}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="box-body1" id="box-body1">
+            <h2>Events</h2>
+            <div>
+                <button type="button" class="btn btn-block btn-success" style="margin-top: 25px" id="add-button1">
+                    <i class="fa fa-plus"></i> Ekle
+                </button>
+            </div>
+            <div class="form-group">
+                <div class="form-group">
+                    <label>Event</label>
+                    {{Form::text('event[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Event'])}}
+                </div>
+            </div>
+        </div>
+        {{Form::submit('Create', ['class' => 'btn btn-primary'])}}
+        {!! Form::close() !!}
+
+
+    </>
+</div>
+
+<script>
+    $(document).ready(function(){
+      $("#add-button").click(function(){
+        $(".box-body").append(`
+        <div class="form-group">
+                    <div class="form-group">
+                        <label>Skill</label>
+                        {{Form::text('skill[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Lead'])}}
+                    </div>
+                    <div class="form-group">
+                        <label>Percent</label>
+                        {{Form::number('percent[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Lead'])}}
+                    </div>
+                    <div class="col-sm-2">
+                    <button type="button" class="btn btn-block btn-danger remove-button" style="margin-top: 25px">
+                        <i class="fa fa-trash"></i> Kaldır
+                    </button>
+                </div>
+                </div>
+                  `);
+      });
+
+
+      $("#box-body").on("click", ".remove-button", function(){
+        console.log($(this).offsetParent()[0].parentElement);
+        var t = $(this).offsetParent()[0].parentElement;
+        t.remove();
+        });
+      });
+
+      $(document).ready(function(){
+      $("#add-button1").click(function(){
+        $(".box-body1").append(`
+        <div class="form-group">
+                <div class="form-group">
+                    <label>Event</label>
+                    {{Form::text('event[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Lead'])}}
+                </div>
+                <div class="col-sm-2">
+            <button type="button" class="btn btn-block btn-danger remove-button" style="margin-top: 25px">
+                <i class="fa fa-trash"></i> Kaldır
+            </button>
+        </div>
+            </div>
+                  `);
+      });
+
+
+      $("#box-body1").on("click", ".remove-button", function(){
+        console.log($(this).offsetParent()[0].parentElement);
+        var t = $(this).offsetParent()[0].parentElement;
+        t.remove();
+        });
+      });
+  </script>
+
+
+@endsection
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="bgc-white p-20 bd">
+    <h2 class="c-grey-900">Edit CV</h2>
+    <div class="mT-30">
+        {!! Form::open(['route' => ['cv.update',$cv->id]]) !!}
+        <div class="form-group">
+            <label>Lead</label>
+            {{Form::text('lead', $cv->lead, ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Lead'])}}
+        </div>
+        <div class="form-group">
+            <label>Description:</label>
+            {{Form::textarea('description', $cv->description, ['class' => 'form-control', 'placeholder' => 'Enter Lead', 'rows' => 4])}}
+        </div>
+        <hr>
+        <div>
+            <div class="row">
+                <div class="col-md-9">
+                    <h2>Skills</h2>
+                </div>
+            </div>
+            <div class="box-body" id="box-body">
+                @foreach($skills as $key => $skill)
+                <div class="row">
+                    <div class="col-md-10">
+                        <div class="form-group">
+                            <label>Skill</label>
+                            {{Form::text('skill[]', $skill->name, ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Skill'])}}
+                        </div>
+                        <div class="form-group">
+                            <label>Percent</label>
+                            {{Form::number('percent[]', $skill->percent, ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Percent'])}}
+                        </div>
+                    </div>
+                    @if($key > 0)
+                    <div class="col-sm-2" style="margin: auto">
+                        <button type="button" class="btn btn-block btn-danger remove-button" style="margin-top: 25px">
+                            <i class="fa fa-trash"></i> Delete
+                        </button>
+                    </div>
+                    @else
+                    <div class="col-sm-2" style="margin: auto">
+                        <button type="button" class="btn btn-block btn-success" style="margin-top: 25px" id="add-button">
+                            <i class="fa fa-plus"></i> Add
+                        </button>
+                    </div>
+                    @endif
+                </div>
+                @endforeach
+            </div>
+        </div>
+
+
+        <hr>
+        <div class="box-body1" id="box-body1">
+            <h2>Events</h2>
+            @foreach($events as $key => $event)
+            <div class="row">
+                <div class="col-md-10">
+                    <label>Event</label>
+                    {{Form::text('event[]', $event->description, ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Lead'])}}
+                </div>
+                @if($key > 0)
+                <div class="col-sm-2" style="margin: auto">
+                    <button type="button" class="btn btn-block btn-danger remove-button" style="margin-top: 25px">
+                        <i class="fa fa-trash"></i> Delete
+                    </button>
+                </div>
+                @else
+                <div class="col-sm-2" style="margin: auto">
+                    <button type="button" class="btn btn-block btn-success" style="margin-top: 25px" id="add-button1">
+                        <i class="fa fa-plus"></i> Add
+                    </button>
+                </div>
+                @endif
+            </div>
+            @endforeach
+        </div>
+        <div class="form-group" style="margin-top: 25px">
+            {{Form::hidden('_method', 'PUT')}}
+
+            {{Form::submit('Update', ['class' => 'btn btn-primary'])}}
+            {!! Form::close() !!}
+        </div>
+
+</div>
+
+<script>
+    $(document).ready(function(){
+      $("#add-button").click(function(){
+        $(".box-body").append(`
+        <div class="row">
+                    <div class="col-md-10">
+                        <div class="form-group">
+                            <label>Skill</label>
+                            {{Form::text('skill[]','', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Skill'])}}
+                        </div>
+                        <div class="form-group">
+                            <label>Percent</label>
+                            {{Form::number('percent[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Percent'])}}
+                        </div>
+                    </div>
+                    <div class="col-sm-2" style="margin: auto">
+                        <button type="button" class="btn btn-block btn-danger remove-button" style="margin-top: 25px">
+                            <i class="fa fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+                  `);
+      });
+
+
+      $("#box-body").on("click", ".remove-button", function(){
+        console.log($(this).offsetParent()[0].parentElement);
+        var t = $(this).offsetParent()[0].parentElement;
+        t.remove();
+        });
+      });
+
+      $(document).ready(function(){
+      $("#add-button1").click(function(){
+        $(".box-body1").append(`
+        <div class="row">
+                <div class="col-md-10">
+                    <label>Event</label>
+                    {{Form::text('event[]', '', ['class' => 'form-control', 'id' => 'lead', 'placeholder' => 'Enter Event'])}}
+                </div>
+                @if($key > 0)
+                <div class="col-sm-2" style="margin: auto">
+                    <button type="button" class="btn btn-block btn-danger remove-button" style="margin-top: 25px">
+                        <i class="fa fa-trash"></i> Delete
+                    </button>
+                </div>
+                @endif
+            </div>
+                  `);
+      });
+      $("#box-body1").on("click", ".remove-button", function(){
+        console.log($(this).offsetParent()[0].parentElement);
+        var t = $(this).offsetParent()[0].parentElement;
+        t.remove();
+        });
+      });
+  </script>
+
+
+@endsection
+
+@extends('layouts.admin')
+@section('content')
+<style>
+    #loader {
+        transition: all 0.3s ease-in-out;
+        opacity: 1;
+        visibility: visible;
+        position: fixed;
+        height: 100vh;
+        width: 100%;
+        background: #fff;
+        z-index: 90000;
+    }
+    #loader.fadeOut {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .spinner {
+        width: 40px;
+        height: 40px;
+        position: absolute;
+        top: calc(50% - 20px);
+        left: calc(50% - 20px);
+        background-color: #333;
+        border-radius: 100%;
+        -webkit-animation: sk-scaleout 1s infinite ease-in-out;
+        animation: sk-scaleout 1s infinite ease-in-out;
+    }
+    @-webkit-keyframes sk-scaleout {
+        0% {
+            -webkit-transform: scale(0);
+        }
+        100% {
+            -webkit-transform: scale(1);
+            opacity: 0;
+        }
+    }
+    @keyframes sk-scaleout {
+        0% {
+            -webkit-transform: scale(0);
+            transform: scale(0);
+        }
+        100% {
+            -webkit-transform: scale(1);
+            transform: scale(1);
+            opacity: 0;
+        }
+    }
+</style>
+<div id="loader"><div class="spinner"></div></div>
+        <script>
+            window.addEventListener("load", function load() {
+                const loader = document.getElementById("loader");
+                setTimeout(function () {
+                    loader.classList.add("fadeOut");
+                }, 300);
+            });
+        </script>
+        <div class="peers ai-s fxw-nw h-100vh">
+            <div
+                class="peer peer-greed h-100 pos-r bgr-n bgpX-c bgpY-c bgsz-cv"
+                style="background-image: url({{ '/images/showcase.jpg' }});"
+            >
+                <div class="pos-a centerXY">
+                    <div
+                        class="bgc-black bdrs-50p pos-r"
+                        style="width: 120px; height: 120px;"
+                    >
+                        <img
+                            {{-- style="width: 90px; height: 90px" --}}
+                            class="pos-a centerXY"
+                            src="{{ '/images/logo.png' }}"
+                            alt=""
+                        />
+                    </div>
+                </div>
+            </div>
+            @include('sweetalert::alert')
+            @yield('form')
+        </div>
+@endsection
+
+@extends('layouts.admin')
+@section('title', 'Dashboard')
+@section('content')
+<style>
+    #loader {
+        transition: all 0.3s ease-in-out;
+        opacity: 1;
+        visibility: visible;
+        position: fixed;
+        height: 100vh;
+        width: 100%;
+        background: #fff;
+        z-index: 90000;
+    }
+    #loader.fadeOut {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .spinner {
+        width: 40px;
+        height: 40px;
+        position: absolute;
+        top: calc(50% - 20px);
+        left: calc(50% - 20px);
+        background-color: #333;
+        border-radius: 100%;
+        -webkit-animation: sk-scaleout 1s infinite ease-in-out;
+        animation: sk-scaleout 1s infinite ease-in-out;
+    }
+    @-webkit-keyframes sk-scaleout {
+        0% {
+            -webkit-transform: scale(0);
+        }
+        100% {
+            -webkit-transform: scale(1);
+            opacity: 0;
+        }
+    }
+    @keyframes sk-scaleout {
+        0% {
+            -webkit-transform: scale(0);
+            transform: scale(0);
+        }
+        100% {
+            -webkit-transform: scale(1);
+            transform: scale(1);
+            opacity: 0;
+        }
+    }
+</style>
+
+<div id="loader"><div class="spinner"></div></div>
+        <script>
+            window.addEventListener("load", function load() {
+                const loader = document.getElementById("loader");
+                setTimeout(function () {
+                    loader.classList.add("fadeOut");
+                }, 300);
+            });
+        </script>
+        <div>
+            <div class="sidebar">
+                <div class="sidebar-inner">
+                    <div class="sidebar-logo">
+                        <div class="peers ai-c fxw-nw">
+                            <div class="peer peer-greed">
+                            <a class="sidebar-link td-n" href="{{route('home')}}"
+                                    ><div class="peers ai-c fxw-nw">
+                                        <div class="peer">
+                                            <div class="logo">
+                                                <img style="width:65px; height:65px"
+                                            src="{{ '/images/logo-dark-ico.png' }}"
+                                                    alt=""
+                                                />
+                                            </div>
+                                        </div>
+                                        <div class="peer peer-greed">
+                                            <h5 class="lh-1 mB-0 logo-text">
+                                                Xdebuggers
+                                            </h5>
+                                        </div>
+                                    </div></a
+                                >
+                            </div>
+                            <div class="peer">
+                                <div class="mobile-toggle sidebar-toggle">
+                                    <a href="" class="td-n"
+                                        ><i class="fas fa-arrow-circle-left"></i
+                                    ></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="sidebar-menu scrollable pos-r">
+                        <li class="nav-item mT-30 actived">
+                            <a class="sidebar-link" href="{{route('dashboard')}}"
+                                ><span class="icon-holder"
+                                    ><i class="c-blue-500 fas fa-home"></i> </span
+                                ><span class="title">Dashboard</span></a
+                            >
+                        </li>
+                        <li class="nav-item">
+                            <a class="sidebar-link" href="{{auth()->user()->getRole() == 'admin' ? '/messages/' : '/messages/'.auth()->user()->id}}"
+                                ><span class="icon-holder"
+                                    ><i class="c-brown-500 fas fa-comments"></i> </span
+                                ><span class="title">{{auth()->user()->getRole() == 'admin' ? 'Messages' : 'My Messages' }}</span></a
+                            >
+                        </li>
+                        @if(auth()->user()->getRole() != 'guest')
+                        <li class="nav-item">
+                            <a class="sidebar-link" href="{{route('announcement.index')}}"
+                                ><span class="icon-holder"
+                                    ><i
+                                        class="c-deep-purple-500 fas fa-bullhorn"></i> </span
+                                ><span class="title">{{auth()->user()->getRole() == 'admin' ? 'Announcements' : 'Old Announcements' }}</span></a
+                            >
+                        </li>
+                        @endif
+
+                        @if(auth()->user()->getRole() == 'admin')
+                        <li class="nav-item">
+                            <a class="sidebar-link" href="{{route('user.index')}}"
+                                ><span class="icon-holder"
+                                    ><i
+                                        class="c-light-blue-500 fas fa-users"
+                                    ></i> </span
+                                ><span class="title">Users</span></a
+                            >
+                        </li>
+                        @endif
+                        @if(auth()->user()->getRole() == 'admin')
+                        <li class="nav-item">
+                            <a class="sidebar-link" href="{{route('cv.create')}}"
+                                ><span class="icon-holder"
+                                    ><i
+                                        class="c-light-blue-500 fa fa-file-o"
+                                    ></i> </span
+                                ><span class="title">CV</span></a
+                            >
+                        </li>
+                        @endif
+                    </ul>
+                </div>
+            </div>
+            <div class="page-container">
+                <div class="header navbar">
+                    <div class="header-container">
+                        <ul class="nav-left">
+                            <li>
+                                <a
+                                    id="sidebar-toggle"
+                                    class="sidebar-toggle"
+                                    href="javascript:void(0);"
+                                    ><i class="fas fa-bars"></i
+                                ></a>
+                            </li>
+                        </ul>
+                        <ul class="nav-right">
+                            <li class="dropdown">
+                                <a
+                                    href=""
+                                    class="dropdown-toggle no-after peers fxw-nw ai-c lh-1"
+                                    data-toggle="dropdown"
+                                    ><div class="peer mR-10">
+                                        <img
+                                            class="w-2r bdrs-50p"
+                                            src="https://randomuser.me/api/portraits/men/10.jpg"
+                                            alt=""
+                                        />
+                                    </div>
+                                    <div class="peer">
+                                        <span class="fsz-sm c-grey-900"
+                                            >{{auth()->user()->firstname.' '.auth()->user()->lastname}}</span
+                                        >
+                                    </div></a
+                                >
+                                <ul class="dropdown-menu fsz-sm">
+                                    <li>
+                                        <a
+                                            href="{{ route('user.edit', auth()->user()->id)}}"
+                                            class="d-b td-n pY-5 bgcH-grey-100 c-grey-700"
+                                            ><i class="fas fa-id-card mR-10"></i>
+                                            <span>Profile</span></a
+                                        >
+                                    </li>
+                                    <li role="separator" class="divider"></li>
+                                    <li>
+                                        <a
+                                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                                        href="#"
+                                        class="d-b td-n pY-5 bgcH-grey-100 c-grey-700"
+                                        ><i class="fas fa-sign-out-alt mR-10"></i>
+                                        <span>Logout</span></a>
+                                        <form id="logout-form" action="{{ route('logout') }}" method="post" style="display: none;">
+                                            {{ csrf_field() }} {{ method_field('POST') }}
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <main class="main-content bgc-grey-100">
+                    <div id="mainContent">
+                        @yield('main-content')
+                    </div>
+                </main>
+                <footer class="bdT ta-c p-30 lh-0 fsz-sm c-grey-600">
+                    <span
+                        >Copyright © 2020 Designed by
+                        <a
+                            href="https://xdebuggers.com"
+                            target="_blank"
+                            title="Xdebuggers"
+                            >Xdebuggers</a
+                        >. All rights reserved.</span
+                    >
+                </footer>
+            </div>
+        </div>
+@endsection
+
+<header id="header-inner">
+    <div class="container">
+      <nav id="main-nav">
+      <img src="{{ '/images/logo.png' }}" alt="My Logo" id="logo" />
+        <div class="menu-wrap mobile">
+          <input type="checkbox" class="hide toggler" />
+          <div class="hamburger hide"><div></div></div>
+          @include('layouts.include.menu')
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+<header id="header-home">
+    <div class="wrap">
+      <div id="arrow-left" class="arrow"></div>
+      <div id="slider">
+        <div class="slide slide1"></div>
+        <div class="slide slide2"></div>
+        <div class="slide slide3"></div>
+      </div>
+      <div id="arrow-right" class="arrow"></div>
+    </div>
+    <div class="landing">
+      <div class="container">
+        <nav id="main-nav">
+          <img src="{{ '/images/logo.png' }}" alt="My Logo" id="logo" />
+          <div class="menu-wrap mobile">
+            <input type="checkbox" class="hide toggler" />
+            <div class="hamburger hide"><div></div></div>
+            @include('layouts.include.menu')
+          </div>
+        </nav>
+        @include('layouts.include.search')
+      </div>
+      <div class="header-content">
+        <h1>
+          We, Xdebuugers <br />
+          Are The Best
+          <span
+            class="txt-type"
+            data-wait="2000"
+            data-words='["Programmers", "Developers", "Desginers"]'
+          >
+          </span>
+        </h1>
+        <p class="lead">
+          We specilized in System dwvelopments Lorem ipsum dolor sit amet
+          consectetur adipisicing elit.
+        </p>
+        <a href="{{route('projects')}}" class="btn-dark">See Our Projects</a>
+      </div>
+    </div>
+  </header>
+
+<div class="menu">
+    <div>
+      <div>
+        <ul class="top-ul">
+          <li class="top-li">
+          <a href="{{route('home')}}" class="top-link {{request::is('/') ? 'current' : ''}}">Home</a>
+          </li>
+          <li class="top-li">
+          <a href="{{route('projects')}}" class="top-link {{request::is('projects') ? 'current' : ''}}"
+              >Projects <i class="fas fa-angle-down"></i
+            ></a>
+            <ul class="in-ul">
+              <li class="in-li">
+                <a href="#">proj #1</a>
+              </li>
+              <li class="in-li">
+                <a href="#">proj #2</a>
+              </li>
+              <li class="in-li">
+                <a href="#">proj #3</a>
+              </li>
+            </ul>
+          </li>
+          <li class="top-li">
+            <a href="{{route('experiences')}}" class="top-link"
+              >Experiences
+            </a>
+          </li>
+          <li class="top-li">
+            <a href="{{route('about')}}" class="top-link {{request::is('about') ? 'current' : ''}}">About</a>
+          </li>
+          <li class="top-li">
+            <a href="{{route('contact')}}" class="top-link {{request::is('contact') ? 'current' : ''}}">Contact</a>
+          </li>
+          <li class="top-li">
+          <a href="{{route('login')}}" class="top-link {{request::is('login') ? 'current' : ''}}">{{auth()->user() ? 'Dashboard' : 'Login'}}</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+<style>
+
+
+.search {
+  width: 100%;
+  position: relative;
+  display: flex;
+}
+
+.searchTerm {
+  width: 100%;
+  border: 2px solid #f15a24;
+  border-right: none;
+  padding: 5px;
+  height: 24px;
+  border-radius: 5px 0 0 5px;
+  outline: none;
+  color: #be5b37;
+  background-color: transparent;
+  font-family: Raleway;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+
+.searchButton {
+  width: 40px;
+  height: 38px;
+  border: 1px solid #f15a24;
+  background: #f15a24;
+  text-align: center;
+  color: #fff;
+  border-radius: 0 5px 5px 0;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+</style>
+<form action="{{route('search')}}" method="post">
+    {{ csrf_field() }} {{ method_field('POST') }}
+    <div class="search">
+        <input type="text" name="term" class="searchTerm" placeholder="What are you looking for?">
+        <button type="submit" class="searchButton">
+            <i class="fa fa-search"></i>
+        </button>
+    </div>
+</form>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="icon" href="{{ '/images/logo-ico.png' }}" type="image/icon type" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{'/css/style.css' }}" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script
+      src="https://kit.fontawesome.com/d8e60bc0b5.js"
+      crossorigin="anonymous"
+    ></script>
+    <title>@yield('title')</title>
+</head>
+<body class="app">
+    @include('sweetalert::alert')
+    @yield('content')
+    <script type="text/javascript" src="{{ '/js/vendor.js' }}"></script>
+    <script type="text/javascript" src="{{ '/js/bundle.js' }}"></script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="icon" href="{{ '/images/logo-ico.png' }}" type="image/icon type" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Raleway&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="{{ '/css/app.css' }}" />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script
+      src="https://kit.fontawesome.com/d8e60bc0b5.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <title>@yield('title')</title>
+  </head>
+  <body>
+    @include('sweetalert::alert')
+    @if(Request::is('/'))
+    @include('layouts.include.home-header')
+    @else
+    @include('layouts.include.header')
+    @endif
+    @yield('header')
+    @yield('content')
+    <footer id="main-footer">
+      <div class="footer-content container">
+        <div class="personal-info">
+          <p>Muhammed Bedavi</p>
+          <p>Information Systems Engineering</p>
+        </div>
+        <div class="contact-info">
+          <p>Email: mhd.b96@gmail.com</p>
+          <p>Phone: 0531 886 12 90</p>
+          <p>Address: Istanbul, Turkey</p>
+        </div>
+        <div class="social">
+          <a href="https://twitter.com/mhd_b96" target="_blank"
+            ><i class="fab fa-twitter"></i
+          ></a>
+
+          <a href="https://www.facebook.com/Mhd.b96" target="_blank"
+            ><i class="fab fa-facebook"></i
+          ></a>
+          <a href="https://www.instagram.com/mhd_b96/" target="_blank"
+            ><i class="fab fa-instagram"></i
+          ></a>
+          <a href="https://www.linkedin.com/in/mhdb96/" target="_blank"
+            ><i class="fab fa-linkedin"></i
+          ></a>
+        </div>
+      </div>
+      <p class="copy-right">Copyright &copy; 2020. All right Reserved</p>
+    </footer>
+    <button id="topBtn">
+      <i class="fas fa-arrow-up fa-2x"></i>
+    </button>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="js/scrollBtn.js"></script>
+  </body>
+</html>
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="bgc-white p-20 bd">
+    <h6 class="c-grey-900">Create a new user</h6>
+    <div class="mT-30">
+        {!! Form::open(['route' => 'user.store']) !!}
+        <div class="form-group">
+            <label>First Name</label>
+            {{Form::text('firstname', '', ['class' => 'form-control', 'placeholder' => 'Enter First Name'])}}
+        </div>
+        <div class="form-group">
+            <label>Last Name</label>
+            {{Form::text('lastname', '', ['class' => 'form-control', 'placeholder' => 'Enter Last Name'])}}
+        </div>
+        <div class="form-group">
+            <label>Birthday</label>
+            {{Form::date('birthday', '', ['class' => 'form-control', 'placeholder' => 'Enter Birthday'])}}
+        </div>
+        <div class="form-group">
+            <label>Email Address</label>
+            {{Form::text('email', '', ['class' => 'form-control', 'placeholder' => 'Enter Email Address'])}}
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            {{Form::password('password', ['class' => 'form-control', 'placeholder' => 'Enter Password'])}}
+        </div>
+        <div class="form-group">
+            <label>Phone</label>
+            {{Form::number('phone', '', ['class' => 'form-control', 'placeholder' => 'Enter Phone'])}}
+        </div>
+        <div class="form-group">
+            <div class="form-check form-check-inline">
+                {{Form::radio('role', 'admin',true)}}
+                <label class="form-check-label" style="margin: 5px"> Admin</label>
+              </div>
+              <div class="form-check form-check-inline">
+                {{Form::radio('role', 'member')}}
+                <label class="form-check-label" style="margin: 5px"> Member</label>
+              </div>
+              <div class="form-check form-check-inline">
+                {{Form::radio('role', 'guest')}}
+                <label class="form-check-label" style="margin: 5px"> Guest</label>
+              </div>
+        </div>
+            {{Form::submit('Create', ['class' => 'btn btn-primary'])}}
+        {!! Form::close() !!}
+    </div>
+</div>
+@endsection
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="bgc-white p-20 bd">
+    <h6 class="c-grey-900">Update user</h6>
+    <div class="mT-30">
+        {!! Form::open(['route' => ['user.update', $user->id]]) !!}
+        <div class="form-group">
+            <label>First Name</label>
+            {{Form::text('firstname', $user->firstname, ['class' => 'form-control', 'placeholder' => 'Enter First Name'])}}
+        </div>
+        <div class="form-group">
+            <label>Last Name</label>
+            {{Form::text('lastname', $user->lastname, ['class' => 'form-control', 'placeholder' => 'Enter Last Name'])}}
+        </div>
+        <div class="form-group">
+            <label>Birthday</label>
+            {{Form::date('birthday', $user->birthday, ['class' => 'form-control', 'placeholder' => 'Enter Birthday'])}}
+        </div>
+        <div class="form-group">
+            <label>Email Address</label>
+            {{Form::text('email', $user->email, ['class' => 'form-control', 'placeholder' => 'Enter Email Address'])}}
+        </div>
+        <div class="form-group">
+            <label>Phone</label>
+            {{Form::number('phone', $user->phone, ['class' => 'form-control', 'placeholder' => 'Enter Phone'])}}
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            {{Form::password('password', ['class' => 'form-control', 'placeholder' => 'Enter Password'])}}
+        </div>
+        @if(auth()->user()->getRole() == 'admin')
+        <div class="form-group">
+            <div class="form-check form-check-inline">
+                {{Form::radio('role', 'admin', $user->role_id == 1 ? true : '')}}
+                <label class="form-check-label" style="margin: 5px"> Admin</label>
+              </div>
+              <div class="form-check form-check-inline">
+                {{Form::radio('role', 'member', $user->role_id == 2 ? true : '')}}
+                <label class="form-check-label" style="margin: 5px"> Member</label>
+              </div>
+              <div class="form-check form-check-inline">
+                {{Form::radio('role', 'guest', $user->role_id == 3 ? true : '')}}
+                <label class="form-check-label" style="margin: 5px"> Guest</label>
+              </div>
+        </div>
+        @endif
+        {{Form::hidden('_method', 'PUT')}}
+            {{Form::submit('Update', ['class' => 'btn btn-primary'])}}
+        {!! Form::close() !!}
+    </div>
+</div>
+@endsection
+
+@extends('layouts.include.bars')
+@section('main-content')
+<a class="btn cur-p btn-success pull-right" style="margin: 10px" href="{{route('user.create')}}">Add</a>
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">
+                First Name
+            </th>
+            <th scope="col">
+                Last Name
+            </th>
+            <th scope="col">
+                Email Address
+            </th>
+            <th scope="col">
+                Actions
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($users as $user)
+        <tr>
+            <th scope="row">{{$user->id}}</th>
+            <td>{{$user->firstname}}</td>
+            <td>{{$user->lastname}}</td>
+            <td>{{$user->email}}</td>
+            <td>
+                <a href="{{ route('user.edit', $user->id)}}" class="btn btn-sm btn-info" style="margin: 3px;">
+                    <i class="fa fa-pencil"></i>
+                </a>
+                {!! Form::open(['route' => ['user.destroy', $user->id], 'method' => 'POST', 'class' => 'pull-left']) !!}
+                {{ Form::hidden('_method', 'DELETE')}}
+                {{Form::button('<i class="fas fa-trash"></i>', ['type' => 'submit', 'class' => 'btn btn-sm btn-danger' , 'style' => 'margin: 3px;'])}}
+                {!! Form::close() !!}
+            </td>
+        </tr>
+        @endforeach
+    </tbody>
+</table>
+@endsection
+
+
+
+@extends('layouts.app')
+@section('title', 'About Us')
+@section('content')
+<div id="cv">
+    <section id="about-a" class="text-center py-3">
+        <div class="container">
+          <h2 class="section-subject">About Me</h2>
+          <div class="bottom-line"></div>
+          <p class="lead">
+            {{$cv->lead}}
+          </p>
+          <div class="about-info">
+            <div class="bio-image"></div>
+            <div class="bio bg-light">
+              <h4>Your Project Is In Safe Hands</h4>
+              <p>
+                {{$cv->description}}
+              </p>
+            </div>
+            <div class="award-1">
+              <i class="fas fa-award fa-3x"></i>
+              <h3>Award One</h3>
+              <p>
+                Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ducimus,
+                magni!
+              </p>
+            </div>
+            <div class="award-2">
+              <i class="fas fa-award fa-3x"></i>
+              <h3>Award Two</h3>
+              <p>
+                Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ducimus,
+                magni!
+              </p>
+            </div>
+            <div class="award-3">
+              <i class="fas fa-award fa-3x"></i>
+              <h3>Award Three</h3>
+              <p>
+                Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ducimus,
+                magni!
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section B: Progress Bars -->
+      <section id="about-b" class="bg-secondary py-3">
+        <div class="container">
+          <h2 class="section-subject">Technical Skills</h2>
+          <div class="bottom-line"></div>
+          @foreach($skills as $skill)
+          <h4>{{$skill->name}}</h4>
+          <div class="progress">
+            <div style="width:{{$skill->percent}}%"></div>
+          </div>
+          @endforeach
+        </div>
+      </section>
+
+      <section id="about-c" class="py-4 bg-light">
+        <div class="container">
+          <h2 class="section-subject">Company Timeline</h2>
+          <div class="bottom-line"></div>
+          <div class="timeline">
+            @foreach($events as $event)
+            <p>
+              {{$event->description}}
+            </p>
+            @endforeach
+          </div>
+        </div>
+      </section>
+</div>
+
+
+  <!-- <section id="about-d" class="py-4">
+    <div class="container">
+    </div>
+  </section> -->
+  <div class="container py-1 text-center">
+    <a href="" class="btn-main" id="download" style="width: 20rem;" onclick="downloadCV()">
+      Download
+    </a>
+  </div>
+  @if (auth()->user())
+  @if (auth()->user()->getRole() == 'admin')
+  <div class="container py-1 text-center">
+    <a href="{{route('cv.edit', $cv->id)}}" class="btn-main" style="width: 20rem;">
+      Update
+    </a>
+  </div>
+  @endif
+  @endif
+  <script src="https://unpkg.com/jspdf@latest/dist/jspdf.min.js"></script>
+  <script>
+      function downloadCV() {
+        var doc = new jsPDF();
+        var elementHTML = $('#cv').html();
+        var specialElementHandlers = {
+            '#elementH': function (element, renderer) {
+                return true;
+            }
+        };
+        doc.fromHTML(elementHTML, 15, 15, {
+            'width': 170,
+            'elementHandlers': specialElementHandlers
+        });
+
+        // Save the PDF
+        doc.save('sample-document.pdf');
+      }
+  </script>
+@endsection
+
+@extends('layouts.app')
+@section('title', 'Contact Us')
+
+@section('content')
+<section id="contact-a" class="text-center py-3">
+    <div class="container">
+      <h2 class="section-subject">Contact Me</h2>
+      <div class="bottom-line"></div>
+      <p class="lead">Here is how you can reach me</p>
+        {!! Form::open(['url' => 'contact/submit']) !!}
+        <div class="text-fields">
+            {{Form::text('firstname', $user->firstname, ['class' => 'text-input first-name-input', 'id' => 'firstname', 'placeholder' => 'First Name','required' => 'required'])}}
+            {{Form::text('lastname', $user->lastname, ['class' => 'text-input last-name-input','placeholder' => 'Last Name','required' => 'required'])}}
+            {{Form::date('birthday', $user->birthday, ['class' => 'text-input date-input','placeholder' => 'Birthday','required' => 'required'])}}
+            {{Form::email('email', $user->email, ['class' => 'text-input email-input','placeholder' => 'Email Address','required' => 'required'])}}
+            {{Form::text('phone', $user->phone, ['class' => 'text-input phone-input','placeholder' => 'Phone Number','required' => 'required'])}}
+            {{Form::text('subject', '', ['class' => 'text-input subject-input','placeholder' => 'Subject','required' => 'required'])}}
+            {{Form::textarea('message', '', ['class' => 'text-input message-input','placeholder' => 'Enter Message','required' => 'required'])}}
+            </div>
+            {{Form::submit('Submit', ['class' => 'btn-dark'])}}
+        {!! Form::close() !!}
+    </div>
+  </section>
+
+  <!-- Section B: Contact Info -->
+  <section id="contact-b" class="py-3 bg-secondary">
+    <div class="container">
+      <div class="contact-info">
+        <div>
+          <i class="fas fa-envelope fa-2x"></i>
+          <h3>Email</h3>
+          <p>
+            <a href="mailto:xdebuggers@gmail.com" target="_top"
+              >xdebuggers@gmail.com</a
+            >
+          </p>
+        </div>
+        <div>
+          <i class="fas fa-phone fa-2x"></i>
+          <h3>Phone</h3>
+          <p>0531 886 12 90</p>
+        </div>
+        <div>
+          <i class="fas fa-address-card fa-2x"></i>
+          <h3>Address</h3>
+          <p>Istanbul, Turkey</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section C: Tagline -->
+  <section id="contact-c" class="bg-primary py-4">
+    <div class="container">
+      <h1>Let's Start Your Next Project</h1>
+    </div>
+  </section>
+@endsection
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="card">
+    <div class="card-header">
+      Welcome {{{auth()->user()->firstname.' '.auth()->user()->lastname}}}
+    </div>
+    <div class="card-body">
+      <h5 class="card-title">This your Dashboard!!</h5>
+      <p class="card-text">You find your available feature at the left side, Enjoy your control panel!</p>
+      <a href="{{route('home')}}" class="btn btn-primary">Discover the site :)</a>
+    </div>
+  </div>
+@endsection
+
+
+@extends('layouts.app')
+@section('title', 'Our Experiences')
+
+@section('content')
+<section id="experiences-a" class="text-center py-2">
+    <div class="container">
+      <h2 class="section-subject">I specilize in</h2>
+      <div class="bottom-line"></div>
+      <p class="lead">
+        Lorem ipsum dolor, sit amet consectetur adipisicing elit. Tempora,
+        iure sunt officia incidunt ratione iste.
+      </p>
+      <div class="specials">
+        <div>
+          <i class="fas fa-file-alt fa-2x"></i>
+          <h3>Concepting</h3>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+            Obcaecati debitis accusamus facere, nesciunt dolorem culpa tenetur
+            provident blanditiis numquam commodi?
+          </p>
+        </div>
+        <div>
+          <i class="fas fa-desktop fa-2x"></i>
+          <h3>Ui/UX</h3>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+            Obcaecati debitis accusamus facere, nesciunt dolorem culpa tenetur
+            provident blanditiis numquam commodi?
+          </p>
+        </div>
+        <div>
+          <i class="fas fa-object-ungroup fa-2x"></i>
+          <h3>Visual design</h3>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+            Obcaecati debitis accusamus facere, nesciunt dolorem culpa tenetur
+            provident blanditiis numquam commodi?
+          </p>
+        </div>
+        <div>
+          <i class="fas fa-thumbs-up fa-2x"></i>
+          <h3>Interaction</h3>
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+            Obcaecati debitis accusamus facere, nesciunt dolorem culpa tenetur
+            provident blanditiis numquam commodi?
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="experiences-b" class="text-center py-2">
+    <div class="container">
+      <video controls autoplay loop>
+        <source src="./img/exp/video.mp4" type="video/mp4" />
+      </video>
+    </div>
+  </section>
+  <section id="experiences-c" class="text-center py-2">
+    <div class="container">
+      <h2 class="section-subject">
+        My Creative Proccess
+      </h2>
+      <div class="bottom-line"></div>
+      <p class="lead">
+        Lorem ipsum dolor, sit amet consectetur adipisicing elit. Tempora,
+        iure sunt officia incidunt ratione iste.
+      </p>
+      <div class="process">
+        <div>
+          <i class="fas fa-file-alt fa-4x process-icon my-2">
+            <div class="process-step">1</div>
+          </i>
+
+          <h3>Discuss the project</h3>
+          <p>
+            Lorem, ipsum dolor sit amet consectetur adipisicing elit.
+            Provident fugiat delectus, pariatur necessitatibus minima facere.
+          </p>
+        </div>
+        <div>
+          <i class="fas fa-desktop fa-4x process-icon my-2">
+            <div class="process-step">2</div>
+          </i>
+
+          <h3>Test</h3>
+          <p>
+            Lorem, ipsum dolor sit amet consectetur adipisicing elit.
+            Provident fugiat delectus, pariatur necessitatibus minima facere.
+          </p>
+        </div>
+        <div>
+          <i class="fas fa-object-ungroup fa-4x process-icon my-2">
+            <div class="process-step">3</div>
+          </i>
+
+          <h3>UI/UX Planning</h3>
+          <p>
+            Lorem, ipsum dolor sit amet consectetur adipisicing elit.
+            Provident fugiat delectus, pariatur necessitatibus minima facere.
+          </p>
+        </div>
+        <div>
+          <i class="fas fa-thumbs-up fa-4x process-icon my-2">
+            <div class="process-step">4</div>
+          </i>
+
+          <h3>Brainstroming ^ Concepts</h3>
+          <p>
+            Lorem, ipsum dolor sit amet consectetur adipisicing elit.
+            Provident fugiat delectus, pariatur necessitatibus minima facere.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+@endsection
+
+@extends('layouts.app')
+@section('title', 'Xdebuggers | We Solve Your Problems')
+
+@section('content')
+    <section id="home-a" class="text-center py-2">
+      <div class="container">
+        <h2 class="section-subject">Latest News</h2>
+        <div class="bottom-line"></div>
+        <p class="lead">
+          Lorem ipsum dolor, sit amet consectetur adipisicing elit. Tempora,
+          iure sunt officia incidunt ratione iste.
+        </p>
+        <div class="news">
+          <div>
+            <div class="img-1"></div>
+            <h3>
+              The top reasons to adopt a modern messaging platform
+            </h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+              Obcaecati debitis.....
+            </p>
+          </div>
+          <div>
+            <div class="img-2"></div>
+            <h3>Challenges to effective DevOps collaboration</h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+              Obcaecati debitis.....
+            </p>
+          </div>
+          <div>
+            <div class="img-3"></div>
+            <h3>AI for software development is already here</h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+              Obcaecati debitis.....
+            </p>
+          </div>
+          <div>
+            <div class="img-4"></div>
+            <h3>How AI is Having a Big Impact in Software Development</h3>
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
+              Obcaecati debitis.....
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="home-b" class="text-center py-2">
+      <div class="stats">
+        <div>
+          <ul>
+            <li><i class="fas fa-users fa-3x"></i></li>
+            <li class="stats-title">Clients</li>
+            <li class="stats-number">100</li>
+          </ul>
+        </div>
+        <div>
+          <ul>
+            <li><i class="fas fa-award fa-3x"></i></li>
+            <li class="stats-title">Awards</li>
+            <li class="stats-number">3</li>
+          </ul>
+        </div>
+        <div>
+          <ul>
+            <li><i class="fas fa-hourglass-start fa-3x"></i></li>
+            <li class="stats-title">Hours Worked</li>
+            <li class="stats-number">1000</li>
+          </ul>
+        </div>
+        <div>
+          <ul>
+            <li><i class="fas fa-code-branch fa-3x"></i></li>
+            <li class="stats-title">Projects completed</li>
+            <li class="stats-number">100</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+    <section id="home-c" class="text-center py-2">
+      <div class="container">
+        <h2 class="section-subject">
+          Announcement For The Week
+        </h2>
+        <div class="bottom-line"></div>
+        <p class="lead">
+          Lorem ipsum dolor, sit amet consectetur adipisicing elit. Tempora,
+          iure sunt officia incidunt ratione iste.
+        </p>
+        <div class="announcement">
+        @foreach($anns as $ann)
+          <div>
+            <div class="img-2"></div>
+
+            <h3>{{$ann->subject}}</h3>
+            <p>
+              {{$ann->content}}
+            </p>
+          </div>
+        @endforeach
+        </div>
+      </div>
+    </section>
+    <script src="js/scrollBtn.js"></script>
+    <script src="js/typewriter.js"></script>
+    <script>
+      let sliderImages = document.querySelectorAll(".slide"),
+        arrowLeft = document.querySelector("#arrow-left"),
+        arrowRight = document.querySelector("#arrow-right"),
+        current = 0;
+
+      // Clear all images
+      function reset() {
+        for (let i = 0; i < sliderImages.length; i++) {
+          sliderImages[i].style.display = "none";
+        }
+      }
+
+      // Init slider
+      function startSlide() {
+        reset();
+        sliderImages[0].style.display = "block";
+      }
+
+      // Show prev
+      function slideLeft() {
+        reset();
+        sliderImages[current - 1].style.display = "block";
+        current--;
+      }
+
+      // Show next
+      function slideRight() {
+        reset();
+        sliderImages[current + 1].style.display = "block";
+        current++;
+      }
+
+      // Left arrow click
+      arrowLeft.addEventListener("click", function() {
+        if (current === 0) {
+          current = sliderImages.length;
+        }
+        slideLeft();
+      });
+
+      // Right arrow click
+      arrowRight.addEventListener("click", function() {
+        if (current === sliderImages.length - 1) {
+          current = -1;
+        }
+        slideRight();
+      });
+
+      startSlide();
+    </script>
+@endsection
+
+hi <strong>{{$name}}</strong>
+<p>{{$body}}</p>
+
+@extends('layouts.include.bars')
+@section('main-content')
+<div class="full-container">
+    <div class="peers fxw-nw pos-r">
+        <div class="peer bdR" id="chat-sidebar">
+            <div class="layers h-100">
+                <div class="layer w-100 fxg-1 scrollable pos-r ps ps--active-y">
+                    @if(auth()->user()->getRole() == 'admin')
+                    @foreach($users as $user)
+                    @if($user != auth()->user())
+                    <a href="/messages/{{$user->id}}">
+                    <div
+                        class="peers fxw-nw ai-c p-20 bdB bgc-white bgcH-grey-50 cur-p"
+                    >
+
+                            <div class="peer">
+                                <img
+                                    src="https://randomuser.me/api/portraits/men/1.jpg"
+                                    alt=""
+                                    class="w-3r h-3r bdrs-50p"
+                                />
+                            </div>
+                            <div class="peer peer-greed pL-20">
+                            <h6 class="mB-0 lh-1 fw-400">{{$user->firstname.' '.$user->lastname}}</h6>
+                            </div>
+
+                    </div>
+                </a>
+                @endif
+                    @endforeach
+                    @else
+                    <div
+                        class="peers fxw-nw ai-c p-20 bdB bgc-white bgcH-grey-50 cur-p"
+                    >
+
+                            <div class="peer">
+                                <img
+                                    src="https://randomuser.me/api/portraits/men/1.jpg"
+                                    alt=""
+                                    class="w-3r h-3r bdrs-50p"
+                                />
+                            </div>
+                            <div class="peer peer-greed pL-20">
+                            <h6 class="mB-0 lh-1 fw-400">{{auth()->user()->firstname.' '.auth()->user()->lastname}}</h6>
+                            </div>
+
+                    </div>
+                    @endif
+                    <div class="ps__rail-x" style="left: 0px; bottom: 0px;">
+                        <div
+                            class="ps__thumb-x"
+                            tabindex="0"
+                            style="left: 0px; width: 0px;"
+                        ></div>
+                    </div>
+                    <div
+                        class="ps__rail-y"
+                        style="top: 0px; height: 578px; right: 0px;"
+                    >
+                        <div
+                            class="ps__thumb-y"
+                            tabindex="0"
+                            style="top: 0px; height: 469px;"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @if($selected_user != null)
+        <div class="peer peer-greed" id="chat-box">
+            <div class="layers h-100">
+                <div class="layer w-100">
+                    <div class="peers fxw-nw jc-sb ai-c pY-20 pX-30 bgc-white">
+                        <div class="peers ai-c">
+                            <div class="peer d-n@md+">
+                                <a
+                                    href=""
+                                    title=""
+                                    id="chat-sidebar-toggle"
+                                    class="td-n c-grey-900 cH-blue-500 mR-30"
+                                    ><i class="ti-menu"></i
+                                ></a>
+                            </div>
+                            <div class="peer">
+                                <h6 class="lh-1 mB-0">{{$selected_user->firstname.' '.$selected_user->lastname}}</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="layer w-100 fxg-1 bgc-grey-200 scrollable pos-r ps">
+                    <div class="p-20 gapY-15">
+                        <div class="peers fxw-nw">
+                            <div class="peer peer-greed">
+                                <div class="layers ai-fs gapY-5">
+                                    @foreach($messages as $msg)
+                                    <div class="layer">
+                                        <div
+                                            class="peers fxw-nw ai-c pY-3 pX-10 bgc-white bdrs-2 lh-3/2"
+                                        >
+                                            <div class="peer mR-10">
+                                                <small>{{$msg->created_at}}</small>
+                                            </div>
+                                            <div class="peer-greed">
+                                                <span
+                                                    >{{$msg->message}}</span
+                                                >
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ps__rail-x" style="left: 0px; bottom: 0px;">
+                        <div
+                            class="ps__thumb-x"
+                            tabindex="0"
+                            style="left: 0px; width: 0px;"
+                        ></div>
+                    </div>
+                    <div class="ps__rail-y" style="top: 0px; right: 0px;">
+                        <div
+                            class="ps__thumb-y"
+                            tabindex="0"
+                            style="top: 0px; height: 0px;"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
+</div>
+
+@endsection
+
+@extends('layouts.app')
+@section('title', 'Our Projects')
+
+@section('content')
+<section id="work-a" class="text-center py-3">
+    <div class="container">
+      <h2 class="section-subject">My Work</h2>
+      <div class="bottom-line"></div>
+      <p class="lead">
+        Check out some of my projects
+      </p>
+      <div class="items">
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item1.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Design</p>
+              <h2 class="item-text-title">Great Gradients</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item2.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">UI/UX</p>
+              <h2 class="item-text-title">World Experience</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item3.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Photography & Design</p>
+              <h2 class="item-text-title">Vanishing</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item4.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Design</p>
+              <h2 class="item-text-title">Gap INC</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item5.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Mobile UI Design</p>
+              <h2 class="item-text-title">Face THe Experience</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item6.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Design Concept</p>
+              <h2 class="item-text-title">Bezier Curves</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item7.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Photography</p>
+              <h2 class="item-text-title">Dock Ponder</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item8.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Web Applications</p>
+              <h2 class="item-text-title">Restaurant App</h2>
+            </div>
+          </div>
+        </div>
+        <div class="item">
+          <div class="item-image">
+            <img src="img/items/item9.jpg" alt="" />
+          </div>
+          <div class="item-text">
+            <div class="item-text-wrap">
+              <p class="item-text-category">Social Network Concept</p>
+              <h2 class="item-text-title">FriendFeed</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+@endsection
+
+@extends('layouts.app')
+@section('title', 'Search Results')
+
+@section('content')
+<div>
+    <style>
+        ol.gradient-list > li, ol.gradient-list > li::before {
+box-shadow: 0.25rem 0.25rem 0.6rem rgba(0, 0, 0, 0.05), 0 0.5rem 1.125rem rgba(75, 0, 0, 0.05);
+}
+
+
+
+ol.gradient-list {
+counter-reset: gradient-counter;
+list-style: none;
+margin: 1.75rem 0;
+padding-left: 1rem;
+}
+ol.gradient-list > li {
+background: white;
+border-radius: 0 0.5rem 0.5rem 0.5rem;
+counter-increment: gradient-counter;
+margin-top: 1rem;
+min-height: 3rem;
+padding: 1rem 1rem 1rem 3rem;
+position: relative;
+}
+ol.gradient-list > li::before, ol.gradient-list > li::after {
+background: linear-gradient(135deg, #f12711 0%, #f5af19 100%);
+border-radius: 1rem 1rem 0 1rem;
+content: '';
+height: 3rem;
+left: -1rem;
+overflow: hidden;
+position: absolute;
+top: -1rem;
+width: 3rem;
+}
+ol.gradient-list > li::before {
+align-items: flex-end;
+content: counter(gradient-counter);
+color: #1d1f20;
+display: flex;
+font: 900 1.5em/1 'Montserrat';
+justify-content: flex-end;
+padding: 0.125em 0.25em;
+z-index: 1;
+}
+
+ol.gradient-list > li + li {
+margin-top: 2rem;
+}
+    </style>
+
+    <section id="about-a" class="text-center py-3">
+        <div class="container" style="min-height: 57vh">
+          <h2 class="section-subject">Results</h2>
+          <div class="bottom-line"></div>
+          @if(!$elements)
+        <h2 class="section-subject">No Results were found</h2>
+        @else
+        <ol class="gradient-list">
+        @foreach($elements as $element)
+
+          <li>
+            <h4>{{$element->subject}}</h4>
+            <p>
+              {{$element->content}}
+            </p>
+        </li>
+        @endforeach
+        </ol>
+        @endif
+        </div>
+      </section>
+</div>
+@endsection
+
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>Laravel</title>
+
+        <!-- Fonts -->
+        <link href="https://fonts.googleapis.com/css?family=Nunito:200,600" rel="stylesheet">
+
+        <!-- Styles -->
+        <style>
+            html, body {
+                background-color: #fff;
+                color: #636b6f;
+                font-family: 'Nunito', sans-serif;
+                font-weight: 200;
+                height: 100vh;
+                margin: 0;
+            }
+
+            .full-height {
+                height: 100vh;
+            }
+
+            .flex-center {
+                align-items: center;
+                display: flex;
+                justify-content: center;
+            }
+
+            .position-ref {
+                position: relative;
+            }
+
+            .top-right {
+                position: absolute;
+                right: 10px;
+                top: 18px;
+            }
+
+            .content {
+                text-align: center;
+            }
+
+            .title {
+                font-size: 84px;
+            }
+
+            .links > a {
+                color: #636b6f;
+                padding: 0 25px;
+                font-size: 13px;
+                font-weight: 600;
+                letter-spacing: .1rem;
+                text-decoration: none;
+                text-transform: uppercase;
+            }
+
+            .m-b-md {
+                margin-bottom: 30px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="flex-center position-ref full-height">
+            @if (Route::has('login'))
+                <div class="top-right links">
+                    @auth
+                        <a href="{{ url('/home') }}">Home</a>
+                    @else
+                        <a href="{{ route('login') }}">Login</a>
+
+                        @if (Route::has('register'))
+                            <a href="{{ route('register') }}">Register</a>
+                        @endif
+                    @endauth
+                </div>
+            @endif
+
+            <div class="content">
+                <div class="title m-b-md">
+                    Laravel
+                </div>
+
+                <div class="links">
+                    <a href="https://laravel.com/docs">Docs</a>
+                    <a href="https://laracasts.com">Laracasts</a>
+                    <a href="https://laravel-news.com">News</a>
+                    <a href="https://blog.laravel.com">Blog</a>
+                    <a href="https://nova.laravel.com">Nova</a>
+                    <a href="https://forge.laravel.com">Forge</a>
+                    <a href="https://vapor.laravel.com">Vapor</a>
+                    <a href="https://github.com/laravel/laravel">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+
+
+Route::get('/', 'PagesController@getHome')->name('home');
+Route::get('/about', 'PagesController@getAbout')->name('about');
+Route::get('/contact', 'PagesController@getContact')->name('contact');
+Route::get('/projects', 'PagesController@getProjects')->name('projects');
+Route::get('/experiences', 'PagesController@getExperiences')->name('experiences');
+Route::post('/search', 'PagesController@getSearchResults')->name('search');
+
+Route::post('/contact/submit', 'MessagesController@submit');
+Route::get('/messages', 'MessagesController@getMessages')->name('messages');
+Route::resource('announcement', 'AnnouncementsController');
+Route::resource('user', 'UsersController');
+Route::resource('cv', 'CvController');
+Auth::routes();
+
+Route::get('/dashboard', 'DashboardController@index')->name('dashboard');
+Route::get('/messages/{id}', 'MessagesController@getUserMessages')->name('getMessages');
+
+
+
